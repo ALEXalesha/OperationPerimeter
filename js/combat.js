@@ -39,7 +39,8 @@
 
   // Шаг состояния оружия: перезарядка, доставание, отдача возвращается, разброс остывает.
   TAC.weaponTick = function (a, dt, time) {
-    const f = a.fire, w = a.weapon(), def = w && w.def;
+    const f = a.fire, w = a.slot === 'grenade' ? null : a.weapon(), def = w && w.def;
+    if (w && f.wref !== w) { f.wref = w; f.spray = 0; f.inacc = 0; }   // другое оружие в руках - своя отдача
     if (f.draw > 0) f.draw = Math.max(0, f.draw - dt);
     if (f.inspect > 0) f.inspect = Math.max(0, f.inspect - dt);
     if (f.reload > 0) {

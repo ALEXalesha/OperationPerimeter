@@ -481,7 +481,7 @@
     }
     // обезвреживание
     const bomb = this.bomb;
-    if (bomb && bomb.state === 'planted') {
+    if (bomb && bomb.state === 'planted' && bomb.pos) {
       const near = a.team === 'CT' && TAC.dist2d(a.pos, bomb.pos) < 1.5 && Math.abs(a.pos.y - bomb.pos.y) < 1.6;
       if (inp.use && near && (!bomb.defuser || bomb.defuser === a) && a.onGround) {
         if (!bomb.defuser) { bomb.defuser = a; bomb.defuse = 0; bomb.kit = a.kit; this.noise(a.pos, 16, a, 'defuse'); this.event({ type: 'defuseStart', agent: a.name }); }
@@ -524,6 +524,7 @@
     const def = a.weaponDef();
     a.fire.draw = def.cat === 'knife' ? 0.25 : def.cat === 'sniper' ? 0.6 : 0.4;
     a.fire.reload = 0; a.fire.scope = 0; a.fire.inspect = 0; a.planting = 0;
+    a.fire.spray = 0; a.fire.inacc = 0; a.fire.punchX = 0; a.fire.punchY = 0;   // отдача прошлого оружия не переносится
     return true;
   };
   P.bestSlot = function (a) { return a.inv.primary ? 'primary' : a.inv.secondary ? 'secondary' : 'knife'; };
@@ -637,7 +638,7 @@
       const old = a.inv[def.slot];
       if (old && !free) this.spawnDrop(old, a, false);
       a.inv[def.slot] = TAC.makeWeapon(id, this.skinFor(a, id));
-      if (a.slot !== def.slot) this.switchSlot(a, def.slot); else a.fire.draw = 0.3;
+      if (a.slot !== def.slot) this.switchSlot(a, def.slot); else { a.fire.draw = 0.3; a.fire.spray = 0; a.fire.inacc = 0; a.fire.scope = 0; }
       if (free && a === this.player && this.playerLoadout) this.playerLoadout[def.slot] = id;
     }
     this.bought(a, id, def.price, free);

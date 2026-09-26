@@ -2,103 +2,119 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Mini FPS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Тир 3D</title>
 <style>
-  html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#000; font-family: 'Courier New', monospace; color:#fff; }
-  canvas { display:block; }
-
-  #hud {
-    position: fixed; inset: 0; pointer-events: none; z-index: 10;
-  }
-  #crosshair {
-    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    width: 22px; height: 22px;
-  }
-  #crosshair::before, #crosshair::after {
-    content:''; position:absolute; background:#00ff88; box-shadow: 0 0 6px #00ff88;
-  }
-  #crosshair::before { left:50%; top:0; width:2px; height:100%; transform: translateX(-50%); }
-  #crosshair::after  { top:50%; left:0; height:2px; width:100%;  transform: translateY(-50%); }
-  #crosshair .dot {
-    position:absolute; left:50%; top:50%; width:3px; height:3px;
-    background:#00ff88; border-radius:50%; transform:translate(-50%,-50%); box-shadow: 0 0 4px #00ff88;
-  }
-
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: Consolas, 'Courier New', monospace; color: #fff; }
+  canvas { display: block; }
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+  #crosshair { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 22px; height: 22px; }
+  #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+  #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; transform: translateX(-50%); }
+  #crosshair::after { top: 50%; left: 0; height: 2px; width: 100%; transform: translateY(-50%); }
   .panel {
-    position: absolute; background: rgba(0,0,0,0.55);
-    border: 1px solid rgba(0,255,136,0.4); padding: 10px 14px;
-    letter-spacing: 1px; font-size: 14px; backdrop-filter: blur(2px);
+    position: absolute; background: rgba(0,0,0,0.55); border: 1px solid rgba(0,255,136,0.4);
+    padding: 10px 14px; letter-spacing: 1px; font-size: 14px;
   }
-  #stats { left: 20px; top: 20px; }
-  #ammo  { right: 20px; bottom: 20px; font-size: 18px; }
-  #stats b, #ammo b { color:#00ff88; }
-
-  #overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
-    display: flex; align-items:center; justify-content:center;
-    flex-direction: column; z-index: 20; cursor: pointer;
-    transition: opacity 0.2s;
+  #stats { left: 20px; top: 20px; line-height: 1.6; }
+  #timer { left: 50%; top: 20px; transform: translateX(-50%); font-size: 22px; }
+  #ammo { right: 20px; bottom: 20px; font-size: 18px; }
+  .panel b { color: #00ff88; }
+  .screen {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.82); display: none;
+    align-items: center; justify-content: center; flex-direction: column; z-index: 20; cursor: pointer; text-align: center;
   }
-  #overlay h1 { font-size: 42px; margin: 0 0 10px; color:#00ff88; letter-spacing: 4px; }
-  #overlay p  { margin: 4px 0; font-size: 14px; line-height:1.6; text-align:center; max-width: 480px; }
-  #overlay .hint { color:#00ff88; margin-top: 20px; font-size: 16px; }
-  #overlay.hidden { opacity: 0; pointer-events: none; }
-
+  .screen.show { display: flex; }
+  .screen h1 { font-size: 40px; margin: 0 0 10px; color: #00ff88; letter-spacing: 4px; }
+  .screen p { margin: 4px 0; font-size: 14px; line-height: 1.6; max-width: 520px; }
+  .screen .hint { color: #00ff88; margin-top: 18px; font-size: 16px; }
   .hitmark {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
-    color: #ff3355; font-size: 28px; font-weight: bold;
-    text-shadow: 0 0 8px #ff3355; opacity: 0;
-    pointer-events: none;
+    color: #ff3355; font-size: 28px; font-weight: bold; text-shadow: 0 0 8px #ff3355; opacity: 0;
   }
   .hitmark.show { animation: pop 0.3s forwards; }
-  @keyframes pop {
-    0% { opacity: 1; transform: translate(-50%,-50%) scale(0.5); }
-    100% { opacity: 0; transform: translate(-50%,-50%) scale(1.4); }
-  }
-
-  .flash {
-    position: fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:15;
-  }
+  @keyframes pop { 0% { opacity: 1; transform: translate(-50%,-50%) scale(0.5); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.4); } }
+  .flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 15; }
   .flash.on { animation: flash 0.08s; }
-  @keyframes flash { 0%{opacity:0.15;} 100%{opacity:0;} }
+  @keyframes flash { 0% { opacity: 0.15; } 100% { opacity: 0; } }
 </style>
 </head>
 <body>
 
-<div id="overlay">
-  <h1>MINI FPS</h1>
-  <p>WASD - движение, Shift - бег, Пробел - прыжок</p>
-  <p>Мышь - обзор, ЛКМ - стрельба, R - перезарядка</p>
-  <p>Сбивай красные мишени. Esc - выйти из захвата мыши.</p>
-  <div class="hint">▶ Кликни чтобы начать</div>
+<div id="menu" class="screen show">
+  <h1>ТИР 3D</h1>
+  <p>Раунд - 60 секунд. Сбей как можно больше красных мишеней.</p>
+  <p>WASD - движение, Shift - бег, Пробел - прыжок, мышь - обзор, ЛКМ - выстрел, R - перезарядка, Esc или P - пауза, M - звук.</p>
+  <p id="menuBest"></p>
+  <div class="hint">▶ Кликни, чтобы начать</div>
+</div>
+<div id="pause" class="screen">
+  <h1>ПАУЗА</h1>
+  <p>Время раунда остановлено.</p>
+  <div class="hint">▶ Кликни, чтобы продолжить</div>
+</div>
+<div id="results" class="screen">
+  <h1>РАУНД ОКОНЧЕН</h1>
+  <p id="resText"></p>
+  <p id="resBest"></p>
+  <div class="hint">▶ Кликни - ещё раунд</div>
 </div>
 
 <div id="hud">
-  <div id="crosshair"><div class="dot"></div></div>
-  <div id="stats" class="panel">Попадания: <b id="hits">0</b> / <b id="shots">0</b> &nbsp;|&nbsp; Точность: <b id="acc">0</b>%</div>
-  <div id="ammo" class="panel">Патроны: <b id="mag">30</b>/<b id="max">30</b></div>
+  <div id="crosshair"></div>
+  <div id="timer" class="panel"><b id="time">60</b> с</div>
+  <div id="stats" class="panel">Попадания: <b id="hits">0</b> / <b id="shots">0</b> · Точность: <b id="acc">0</b>%<br>Рекорд: <b id="best">0</b></div>
+  <div id="ammo" class="panel">Патроны: <b id="mag">30</b>/<b>30</b></div>
   <div class="hitmark" id="hitmark">✕</div>
 </div>
-
 <div class="flash" id="flash"></div>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
-  }
+<!-- three.js r149 лежит рядом (vendor/), чтобы страница работала без интернета и по адресу file:// -->
+<script src="vendor/three.min.js"></script>
+<script>
+'use strict';
+const ROUND_S = 60, MAG = 30, RELOAD_S = 1.2, RESPAWN_S = 0.8, ARENA = 28;
+const BEST_KEY = 'fps_range_best';
+
+const params = new URLSearchParams(location.search);
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
-</script>
+const rnd = params.has('seed') ? mulberry32(Number(params.get('seed')) || 1) : Math.random;
+function loadBest() { try { return parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; } catch (e) { return 0; } }
+function saveBest(v) { try { localStorage.setItem(BEST_KEY, String(v)); } catch (e) { /* нет хранилища */ } }
 
-<script type="module">
-import * as THREE from 'three';
+// ---------- Звук ----------
+let actx = null, muted = false;
+function beep(freq, dur, type = 'square', vol = 0.05, slide) {
+  if (muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur);
+  } catch (e) { /* звук недоступен */ }
+}
+const SFX = {
+  shot: () => beep(180, 0.09, 'sawtooth', 0.06, 60),
+  hit: () => beep(1200, 0.08, 'triangle', 0.06),
+  empty: () => beep(90, 0.05, 'square', 0.04),
+  reload: () => { beep(400, 0.05); setTimeout(() => beep(600, 0.06), 150); },
+};
 
-// Scene
+// ---------- Сцена ----------
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1a22);
 scene.fog = new THREE.Fog(0x1a1a22, 20, 80);
-
-const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 200);
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 200);
+camera.rotation.order = 'YXZ';
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -106,348 +122,317 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
-// Lighting
 scene.add(new THREE.AmbientLight(0x606070, 0.5));
-
 const sun = new THREE.DirectionalLight(0xfff2d0, 1.0);
 sun.position.set(15, 25, 10);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
-sun.shadow.camera.left = -30; sun.shadow.camera.right = 30;
-sun.shadow.camera.top = 30;   sun.shadow.camera.bottom = -30;
+Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30 });
 scene.add(sun);
-
 const accent = new THREE.PointLight(0x00ff88, 0.6, 30);
 accent.position.set(0, 6, 0);
 scene.add(accent);
+for (let i = 0; i < 4; i++) {
+  const l = new THREE.PointLight(0x00ffaa, 0.3, 15);
+  l.position.set(Math.cos(i * Math.PI / 2) * 20, 3, Math.sin(i * Math.PI / 2) * 20);
+  scene.add(l);
+}
 
-// Floor
-const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2a35, roughness: 0.9 });
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), floorMat);
-floor.rotation.x = -Math.PI/2;
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x2a2a35, roughness: 0.9 }));
+floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
-
-// Grid for floor feel
 const grid = new THREE.GridHelper(60, 30, 0x00ff88, 0x333344);
+grid.position.y = 0.01;                 // над полом, иначе сетка мерцает (z-fighting)
 grid.material.opacity = 0.25;
 grid.material.transparent = true;
 scene.add(grid);
 
-// Walls (as colliders)
+// Стены: и препятствие для игрока, и преграда для выстрела
 const walls = [];
 const wallMat = new THREE.MeshStandardMaterial({ color: 0x3a3a48, roughness: 0.7 });
-
 function addWall(x, z, w, d, h = 4) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
-  mesh.position.set(x, h/2, z);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
+  mesh.position.set(x, h / 2, z);
+  mesh.castShadow = true; mesh.receiveShadow = true;
   scene.add(mesh);
-  walls.push({ mesh, min: new THREE.Vector3(x-w/2, 0, z-d/2), max: new THREE.Vector3(x+w/2, h, z+d/2) });
-  return mesh;
+  walls.push({ mesh, min: new THREE.Vector3(x - w / 2, 0, z - d / 2), max: new THREE.Vector3(x + w / 2, h, z + d / 2) });
+}
+addWall(0, -30, 60, 1); addWall(0, 30, 60, 1); addWall(-30, 0, 1, 60); addWall(30, 0, 1, 60);
+addWall(-8, -5, 4, 1, 2.5); addWall(8, -5, 4, 1, 2.5); addWall(0, 5, 8, 1, 2.5);
+addWall(-14, 10, 1, 8, 3); addWall(14, 10, 1, 8, 3);
+addWall(-6, -18, 6, 4, 3); addWall(6, -18, 6, 4, 3);
+const wallMeshes = walls.map((w) => w.mesh);
+
+function insideWall(p, margin) {
+  return walls.some((w) => p.x > w.min.x - margin && p.x < w.max.x + margin && p.z > w.min.z - margin && p.z < w.max.z + margin && p.y < w.max.y + margin);
 }
 
-// Outer walls
-addWall(0, -30, 60, 1);
-addWall(0,  30, 60, 1);
-addWall(-30, 0, 1, 60);
-addWall( 30, 0, 1, 60);
-
-// Inner cover
-addWall(-8,  -5, 4, 1, 2.5);
-addWall( 8,  -5, 4, 1, 2.5);
-addWall( 0,   5, 8, 1, 2.5);
-addWall(-14, 10, 1, 8, 3);
-addWall( 14, 10, 1, 8, 3);
-addWall(-6, -18, 6, 4, 3);
-addWall( 6, -18, 6, 4, 3);
-
-// Targets
+// ---------- Мишени: у каждой свой «дом», появляются рядом с ним, не в стене и не за ареной ----------
 const targets = [];
+const HOMES = [[-10, 2, -20], [0, 3, -22], [10, 2, -20], [-18, 2, 0], [18, 2, 0], [-10, 4, 18], [0, 2, 20], [10, 4, 18], [0, 5, -10], [-5, 3, 10], [5, 3, 10]];
 const targetMat = new THREE.MeshStandardMaterial({ color: 0xff3355, emissive: 0x661122, roughness: 0.4 });
-
-function spawnTarget(x, y, z) {
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), targetMat.clone());
-  mesh.position.set(x, y, z);
+const targetGeo = new THREE.SphereGeometry(0.5, 16, 12);
+for (const h of HOMES) {
+  const mesh = new THREE.Mesh(targetGeo, targetMat);
   mesh.castShadow = true;
-  mesh.userData = {
-    alive: true,
-    origin: new THREE.Vector3(x, y, z),
-    phase: Math.random() * Math.PI * 2,
-    amp: 0.8 + Math.random() * 0.8,
-    speed: 0.8 + Math.random() * 0.6,
-  };
+  mesh.userData = { alive: true, home: new THREE.Vector3(...h), origin: new THREE.Vector3(...h), phase: rnd() * Math.PI * 2, amp: 0.8 + rnd() * 0.8, speed: 0.8 + rnd() * 0.6, respawn: 0 };
+  mesh.position.copy(mesh.userData.origin);
   scene.add(mesh);
   targets.push(mesh);
 }
-
-function spawnAllTargets() {
-  const positions = [
-    [-10,  2, -20], [ 0,  3, -22], [ 10, 2, -20],
-    [-18,  2,   0], [ 18, 2,   0],
-    [-10,  4,  18], [ 0,  2,  20], [ 10, 4,  18],
-    [  0,  5, -10], [ -5, 3,  10], [  5, 3,  10],
-  ];
-  positions.forEach(p => spawnTarget(...p));
-}
-spawnAllTargets();
-
-// Pillars of light for atmosphere
-for (let i = 0; i < 4; i++) {
-  const light = new THREE.PointLight(0x00ffaa, 0.3, 15);
-  light.position.set(Math.cos(i * Math.PI/2) * 20, 3, Math.sin(i * Math.PI/2) * 20);
-  scene.add(light);
+function placeNearHome(t) {
+  const u = t.userData;
+  for (let i = 0; i < 20; i++) {
+    const p = new THREE.Vector3(u.home.x + (rnd() - 0.5) * 6, Math.max(1.2, u.home.y + (rnd() - 0.5) * 2), u.home.z + (rnd() - 0.5) * 4);
+    if (Math.abs(p.x) < ARENA - 1 && Math.abs(p.z) < ARENA - 1 && !insideWall(p, 0.9)) { u.origin.copy(p); break; }
+  }
+  t.position.copy(u.origin);
 }
 
-// Player
-const player = {
-  pos: new THREE.Vector3(0, 1.6, 15),
-  vel: new THREE.Vector3(),
-  yaw: 0,
-  pitch: 0,
-  onGround: true,
-  radius: 0.4,
-  height: 1.6,
-};
-
-// Gun model (simple)
+// ---------- Игрок и оружие ----------
+const player = { pos: new THREE.Vector3(0, 1.6, 15), vel: new THREE.Vector3(), yaw: 0, pitch: 0, recoil: 0, onGround: true, radius: 0.4 };
 const gunGroup = new THREE.Group();
-const gunBody = new THREE.Mesh(
-  new THREE.BoxGeometry(0.15, 0.15, 0.6),
-  new THREE.MeshStandardMaterial({ color: 0x222228, roughness: 0.5 })
-);
+const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.6), new THREE.MeshStandardMaterial({ color: 0x222228, roughness: 0.5 }));
 gunBody.position.set(0.25, -0.25, -0.5);
-const gunBarrel = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.03, 0.03, 0.4),
-  new THREE.MeshStandardMaterial({ color: 0x444450, roughness: 0.3 })
-);
-gunBarrel.rotation.x = Math.PI/2;
+const gunBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4), new THREE.MeshStandardMaterial({ color: 0x444450, roughness: 0.3 }));
+gunBarrel.rotation.x = Math.PI / 2;
 gunBarrel.position.set(0.25, -0.22, -0.85);
 gunGroup.add(gunBody, gunBarrel);
 camera.add(gunGroup);
-scene.add(camera);
-
-// Muzzle flash
 const muzzleLight = new THREE.PointLight(0xffaa44, 0, 5);
 muzzleLight.position.set(0.25, -0.22, -1.05);
 camera.add(muzzleLight);
+scene.add(camera);
 
-// Input
+const state = { phase: 'menu', timeLeft: ROUND_S, hits: 0, shots: 0, mag: MAG, reload: 0, best: loadBest() };
 const keys = {};
-let mouseLocked = false;
+let locked = false, testMode = false;
 
-const overlay = document.getElementById('overlay');
-const flashEl = document.getElementById('flash');
-const hitmarkEl = document.getElementById('hitmark');
+// ---------- Экраны ----------
+const screens = { menu: document.getElementById('menu'), pause: document.getElementById('pause'), results: document.getElementById('results') };
+function showScreen(name) { for (const k in screens) screens[k].classList.toggle('show', k === name); }
+document.getElementById('menuBest').textContent = state.best ? 'Рекорд: ' + state.best + ' попаданий' : '';
 
-overlay.addEventListener('click', () => renderer.domElement.requestPointerLock());
-
-document.addEventListener('pointerlockchange', () => {
-  mouseLocked = document.pointerLockElement === renderer.domElement;
-  overlay.classList.toggle('hidden', mouseLocked);
-});
-
-document.addEventListener('mousemove', (e) => {
-  if (!mouseLocked) return;
-  player.yaw   -= e.movementX * 0.002;
-  player.pitch -= e.movementY * 0.002;
-  player.pitch = Math.max(-Math.PI/2 + 0.01, Math.min(Math.PI/2 - 0.01, player.pitch));
-});
-
-document.addEventListener('keydown', (e) => {
-  keys[e.code] = true;
-  if (e.code === 'KeyR') reload();
-});
-document.addEventListener('keyup',   (e) => { keys[e.code] = false; });
-
-document.addEventListener('mousedown', (e) => {
-  if (!mouseLocked || e.button !== 0) return;
-  shoot();
-});
-
-// Game state
-const state = {
-  hits: 0,
-  shots: 0,
-  mag: 30,
-  maxMag: 30,
-  reloading: false,
-};
-
-const hitsEl  = document.getElementById('hits');
-const shotsEl = document.getElementById('shots');
-const accEl   = document.getElementById('acc');
-const magEl   = document.getElementById('mag');
-const maxEl   = document.getElementById('max');
-maxEl.textContent = state.maxMag;
-
-function updateHUD() {
-  hitsEl.textContent = state.hits;
-  shotsEl.textContent = state.shots;
-  accEl.textContent = state.shots ? Math.round(100 * state.hits / state.shots) : 0;
-  magEl.textContent = state.mag;
+function beginRound() {
+  state.phase = 'play';
+  state.timeLeft = ROUND_S; state.hits = 0; state.shots = 0; state.mag = MAG; state.reload = 0;
+  player.pos.set(0, 1.6, 15); player.vel.set(0, 0, 0); player.yaw = 0; player.pitch = 0; player.recoil = 0;
+  for (const t of targets) { t.userData.alive = true; t.userData.respawn = 0; t.visible = true; placeNearHome(t); }
+  showScreen(null);
+  updateHUD();
 }
-
-// Shoot logic
-const raycaster = new THREE.Raycaster();
-const screenCenter = new THREE.Vector2(0, 0);
-
-function shoot() {
-  if (state.reloading) return;
-  if (state.mag <= 0) { reload(); return; }
-  state.mag -= 1;
-  state.shots += 1;
-
-  muzzleLight.intensity = 2;
-  flashEl.classList.remove('on'); void flashEl.offsetWidth; flashEl.classList.add('on');
-
-  // Recoil
-  player.pitch += 0.01 + Math.random() * 0.008;
-  gunGroup.position.z = 0.05;
-
-  raycaster.setFromCamera(screenCenter, camera);
-  const alive = targets.filter(t => t.userData.alive);
-  const hits = raycaster.intersectObjects(alive, false);
-  if (hits.length > 0) {
-    const hit = hits[0].object;
-    hit.userData.alive = false;
-    hit.visible = false;
-    state.hits += 1;
-    showHitmark();
-
-    // Respawn after delay at a new offset
-    setTimeout(() => {
-      const o = hit.userData.origin;
-      hit.position.set(
-        o.x + (Math.random() - 0.5) * 6,
-        o.y + (Math.random() - 0.5) * 2,
-        o.z + (Math.random() - 0.5) * 4
-      );
-      hit.userData.origin.copy(hit.position);
-      hit.userData.alive = true;
-      hit.visible = true;
-    }, 800);
-  }
+function pauseGame() { if (state.phase === 'play') { state.phase = 'paused'; for (const k in keys) keys[k] = false; showScreen('pause'); } }
+function resumeGame() { if (state.phase === 'paused') { state.phase = 'play'; showScreen(null); } }
+function endRound() {
+  state.phase = 'results';
+  const record = state.hits > state.best;
+  if (record) { state.best = state.hits; saveBest(state.best); }
+  const acc = state.shots ? Math.round(100 * state.hits / state.shots) : 0;
+  document.getElementById('resText').textContent = 'Попаданий: ' + state.hits + ' из ' + state.shots + ' выстрелов, точность ' + acc + '%';
+  document.getElementById('resBest').textContent = record ? 'Новый рекорд!' : 'Рекорд: ' + state.best;
+  if (document.pointerLockElement) document.exitPointerLock();
+  showScreen('results');
   updateHUD();
 }
 
-function showHitmark() {
-  hitmarkEl.classList.remove('show');
-  void hitmarkEl.offsetWidth;
-  hitmarkEl.classList.add('show');
+for (const k in screens) screens[k].addEventListener('click', () => {
+  if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock();
+});
+document.addEventListener('pointerlockchange', () => {
+  locked = document.pointerLockElement === renderer.domElement;
+  if (locked) {
+    if (state.phase === 'menu' || state.phase === 'results') beginRound();
+    else resumeGame();
+  } else if (!testMode) {
+    pauseGame();
+  }
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!locked || state.phase !== 'play') return;
+  player.yaw -= e.movementX * 0.002;
+  player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - e.movementY * 0.002));
+});
+document.addEventListener('mousedown', (e) => { if (locked && e.button === 0) shoot(); });
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyM') muted = !muted;
+  if (e.code === 'KeyP') {
+    if (state.phase === 'play') { pauseGame(); if (document.pointerLockElement) document.exitPointerLock(); }
+    else if (testMode) resumeGame();          // в обычной игре продолжение - кликом (нужен захват мыши)
+    return;
+  }
+  if (state.phase !== 'play') return;
+  keys[e.code] = true;
+  if (e.code === 'KeyR') startReload();
+  if (e.code === 'Space') e.preventDefault();
+});
+document.addEventListener('keyup', (e) => { keys[e.code] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+// ---------- Стрельба ----------
+const raycaster = new THREE.Raycaster();
+const flashEl = document.getElementById('flash');
+const hitmarkEl = document.getElementById('hitmark');
+function restartAnim(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+function shoot() {
+  if (state.phase !== 'play' || state.reload > 0) return null;
+  if (state.mag <= 0) { SFX.empty(); startReload(); return null; }
+  state.mag--; state.shots++;
+  muzzleLight.intensity = 2;
+  restartAnim(flashEl, 'on');
+  SFX.shot();
+  gunGroup.position.z = 0.05;
+  syncCamera();
+  scene.updateMatrixWorld();              // мишени качаются: луч должен видеть их текущее место, а не прошлый кадр
+  raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+  // Луч видит и мишени, и стены с полом: первое, что он встретил, и получает пулю
+  const alive = targets.filter((t) => t.userData.alive);
+  const hits = raycaster.intersectObjects([...alive, ...wallMeshes, floor], false);
+  let result = null;
+  if (hits.length && targets.includes(hits[0].object)) {
+    const t = hits[0].object;
+    t.userData.alive = false;
+    t.visible = false;
+    t.userData.respawn = RESPAWN_S;
+    state.hits++;
+    restartAnim(hitmarkEl, 'show');
+    SFX.hit();
+    result = t;
+  }
+  player.recoil += 0.012;
+  updateHUD();
+  return result;
 }
 
-function reload() {
-  if (state.reloading || state.mag === state.maxMag) return;
-  state.reloading = true;
-  magEl.textContent = '...';
-  setTimeout(() => {
-    state.mag = state.maxMag;
-    state.reloading = false;
-    updateHUD();
-  }, 1200);
+function startReload() {
+  if (state.reload > 0 || state.mag === MAG) return;
+  state.reload = RELOAD_S;
+  SFX.reload();
+  updateHUD();
 }
 
-// Collision: AABB check player cylinder vs wall boxes
 function collide(pos) {
   for (const w of walls) {
     const cx = Math.max(w.min.x, Math.min(pos.x, w.max.x));
     const cz = Math.max(w.min.z, Math.min(pos.z, w.max.z));
-    const dx = pos.x - cx;
-    const dz = pos.z - cz;
-    const d2 = dx*dx + dz*dz;
+    const dx = pos.x - cx, dz = pos.z - cz;
+    const d2 = dx * dx + dz * dz;
     if (d2 < player.radius * player.radius) {
       const d = Math.sqrt(d2) || 0.0001;
       const push = (player.radius - d) / d;
-      pos.x += dx * push;
-      pos.z += dz * push;
+      pos.x += dx * push; pos.z += dz * push;
     }
   }
 }
 
-// Game loop
-let prev = performance.now();
-const forward = new THREE.Vector3();
-const right = new THREE.Vector3();
+function syncCamera() {
+  camera.position.copy(player.pos);
+  camera.rotation.y = player.yaw;
+  camera.rotation.x = player.pitch + player.recoil;
+  camera.updateMatrixWorld();
+}
 
-function tick() {
-  const now = performance.now();
-  const dt = Math.min(0.05, (now - prev) / 1000);
-  prev = now;
-
-  // Movement
-  if (mouseLocked) {
-    const speed = (keys['ShiftLeft'] || keys['ShiftRight']) ? 8 : 5;
-    forward.set(Math.sin(player.yaw), 0, Math.cos(player.yaw));
-    right.set(forward.z, 0, -forward.x);
-
-    let mx = 0, mz = 0;
-    if (keys['KeyW']) mz -= 1;
-    if (keys['KeyS']) mz += 1;
-    if (keys['KeyA']) mx -= 1;
-    if (keys['KeyD']) mx += 1;
-
-    const len = Math.hypot(mx, mz) || 1;
-    mx /= len; mz /= len;
-
-    player.vel.x = (-forward.x * mz - right.x * mx) * speed;
-    player.vel.z = (-forward.z * mz - right.z * mx) * speed;
-
-    // Jump
-    if (keys['Space'] && player.onGround) {
-      player.vel.y = 6;
-      player.onGround = false;
+// ---------- Логика за dt секунд ----------
+let clock = 0;
+function tick(dt) {
+  clock += dt;
+  if (state.phase === 'play') {
+    state.timeLeft -= dt;
+    if (state.reload > 0) {
+      state.reload -= dt;
+      if (state.reload <= 0) { state.reload = 0; state.mag = MAG; }
     }
+    for (const t of targets) {
+      const u = t.userData;
+      if (!u.alive && (u.respawn -= dt) <= 0) { placeNearHome(t); u.alive = true; t.visible = true; }
+    }
+    // Движение: W - туда, куда смотрит камера
+    const speed = (keys.ShiftLeft || keys.ShiftRight) ? 8 : 5;
+    const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);   // вперёд
+    const rx = -fz, rz = fx;                                         // вправо
+    let mf = 0, mr = 0;
+    if (keys.KeyW) mf += 1;
+    if (keys.KeyS) mf -= 1;
+    if (keys.KeyD) mr += 1;
+    if (keys.KeyA) mr -= 1;
+    const len = Math.hypot(mf, mr) || 1;
+    player.vel.x = (fx * mf + rx * mr) / len * speed;
+    player.vel.z = (fz * mf + rz * mr) / len * speed;
+    if (keys.Space && player.onGround) { player.vel.y = 6; player.onGround = false; }
+    if (state.timeLeft <= 0) { state.timeLeft = 0; endRound(); }
   } else {
     player.vel.x = 0; player.vel.z = 0;
   }
-
-  // Gravity
-  player.vel.y -= 18 * dt;
-
-  player.pos.x += player.vel.x * dt;
-  player.pos.z += player.vel.z * dt;
-  collide(player.pos);
-
-  player.pos.y += player.vel.y * dt;
-  if (player.pos.y <= 1.6) {
-    player.pos.y = 1.6;
-    player.vel.y = 0;
-    player.onGround = true;
+  if (state.phase === 'play' || state.phase === 'menu') {
+    player.vel.y -= 18 * dt;
+    player.pos.x += player.vel.x * dt;
+    player.pos.z += player.vel.z * dt;
+    collide(player.pos);
+    player.pos.y += player.vel.y * dt;
+    if (player.pos.y <= 1.6) { player.pos.y = 1.6; player.vel.y = 0; player.onGround = true; }
   }
-
-  // Camera
-  camera.position.copy(player.pos);
-  camera.rotation.order = 'YXZ';
-  camera.rotation.y = player.yaw;
-  camera.rotation.x = player.pitch;
-
-  // Gun recoil recovery
-  gunGroup.position.z = THREE.MathUtils.lerp(gunGroup.position.z, 0, 0.15);
+  player.recoil *= Math.exp(-8 * dt);                   // отдача возвращается, прицел не уползает вверх
+  gunGroup.position.z += (0 - gunGroup.position.z) * Math.min(1, dt * 10);
   muzzleLight.intensity = Math.max(0, muzzleLight.intensity - dt * 15);
-
-  // Target animation (bobbing)
-  const t = now / 1000;
-  for (const tg of targets) {
-    if (!tg.userData.alive) continue;
-    const u = tg.userData;
-    tg.position.y = u.origin.y + Math.sin(t * u.speed + u.phase) * u.amp * 0.4;
-    tg.position.x = u.origin.x + Math.cos(t * u.speed * 0.7 + u.phase) * u.amp * 0.3;
+  if (state.phase !== 'paused') {
+    for (const t of targets) {
+      const u = t.userData;
+      if (!u.alive) continue;
+      t.position.y = u.origin.y + Math.sin(clock * u.speed + u.phase) * u.amp * 0.4;
+      t.position.x = u.origin.x + Math.cos(clock * u.speed * 0.7 + u.phase) * u.amp * 0.3;
+    }
   }
-
-  renderer.render(scene, camera);
-  requestAnimationFrame(tick);
+  syncCamera();
 }
 
+let hudCache = '';
+function updateHUD() {
+  const s = [Math.ceil(state.timeLeft), state.hits, state.shots, state.mag, state.reload > 0, state.best].join('|');
+  if (s === hudCache) return;
+  hudCache = s;
+  document.getElementById('time').textContent = Math.ceil(state.timeLeft);
+  document.getElementById('hits').textContent = state.hits;
+  document.getElementById('shots').textContent = state.shots;
+  document.getElementById('acc').textContent = state.shots ? Math.round(100 * state.hits / state.shots) : 0;
+  document.getElementById('mag').textContent = state.reload > 0 ? '...' : state.mag;
+  document.getElementById('best').textContent = state.best;
+}
+
+let prev = performance.now();
+function frame(now) {
+  tick(Math.min(0.05, (now - prev) / 1000));
+  prev = now;
+  updateHUD();
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
+syncCamera();
+requestAnimationFrame(frame);
 
-updateHUD();
-tick();
+// ---------- Крючок для проверок: раунд без захвата мыши ----------
+window.__game = {
+  ready: true,
+  state, player, targets, keys, walls, ROUND_S, MAG,
+  begin() { testMode = true; beginRound(); },
+  pause: pauseGame, resume: resumeGame,
+  tick(dt, n = 1) { for (let i = 0; i < n; i++) tick(dt); updateHUD(); },
+  shoot,
+  aimAt(x, y, z) {
+    const dx = x - player.pos.x, dy = y - player.pos.y, dz = z - player.pos.z;
+    player.yaw = Math.atan2(-dx, -dz);
+    player.pitch = Math.atan2(dy, Math.hypot(dx, dz));
+    player.recoil = 0;
+    syncCamera();
+  },
+  renderer,
+};
 </script>
 </body>
 </html>

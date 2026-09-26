@@ -45,7 +45,8 @@ body.ingame #shade { opacity: 0; }
 .menumain { flex: 1; position: relative; overflow: hidden; }
 .tab { position: absolute; inset: 0; padding: 22px 28px; display: none; overflow: auto; }
 .tab.show { display: block; }
-.note { position: absolute; left: 18px; bottom: 10px; font-size: 11px; color: var(--dim2); letter-spacing: 0.04em; pointer-events: none; }
+.note { flex: none; padding: 4px 18px 6px; font-size: 11px; color: var(--dim2); letter-spacing: 0.04em; pointer-events: none; }
+.rankicon { flex: none; }
 
 .homecard { max-width: 520px; margin-top: 4vh; }
 .kicker { color: var(--accent); font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; font-weight: 700; }

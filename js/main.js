@@ -227,14 +227,23 @@
     if (app.locked) app.expectUnlock = false;
   });
   // Вкладка скрыта: пауза, звук выключен, мышь отпущена. Вернулись - остаётся пауза.
+  // В бою звук вернётся вместе с «Продолжить», в меню - сразу, как вкладку показали.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       if (app.mode === 'game' && !app.paused) app.pause('Игра остановлена: вкладка была скрыта.');
       if (TAC.audio) TAC.audio.suspend();
-      app.hiddenPause = true;
+    } else if (app.mode !== 'game' && TAC.audio) {
+      TAC.audio.resume();
     }
   });
-  addEventListener('blur', () => { for (const k in app.act) app.act[k] = false; app.mouseL = false; });
+  // Окно потеряло фокус или страницу сняли с окна (вкладка в оболочке «Игротека») - тоже пауза
+  const focusLost = (why) => {
+    for (const k in app.act) app.act[k] = false;
+    app.mouseL = false;
+    if (app.mode === 'game' && !app.paused && !app.manual) app.pause(why);
+  };
+  addEventListener('blur', () => focusLost('Игра остановлена: окно потеряло фокус.'));
+  addEventListener('pagehide', () => { focusLost('Игра остановлена.'); if (TAC.audio) TAC.audio.suspend(); });
 
   // ---------- Ввод ----------
   function actionOf(code) {

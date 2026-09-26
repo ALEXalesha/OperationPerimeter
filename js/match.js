@@ -43,6 +43,7 @@
     this.buildZones();
     const setup = { comp: this.setupComp, dm: this.setupDM, tdm: this.setupTDM, train: this.setupTrain }[this.mode];
     setup.call(this);
+    if (this.player) this.player.inv.knife = TAC.makeWeapon('knife', this.skinFor(this.player, 'knife'));
   }
   TAC.Match = Match;
   const P = Match.prototype;
@@ -975,7 +976,7 @@
     for (const b of this.brains) if (b.bot === a) b.onFired && b.onFired();
   };
 
-  P.event = function (e) { e.t = this.time; this.events.push(e); if (this.events.length > 200) this.events.shift(); };
+  P.event = function (e) { e.t = this.time; e.id = (this.eventId = (this.eventId || 0) + 1); this.events.push(e); if (this.events.length > 200) this.events.shift(); };
 
   // ---------- Конец матча ----------
   P.finish = function (training) {

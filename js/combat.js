@@ -136,7 +136,19 @@
       const r = TAC.rayAgent(o, d, best, b);
       if (r && r.t < best) { best = r.t; hitAgent = b; zone = r.zone; }
     }
+    let target = null;
+    if (match.targets) {
+      for (const tg of match.targets) {
+        if (!tg.alive) continue;
+        const lx = o.x - tg.pos.x, ly = o.y - tg.pos.y, lz = o.z - tg.pos.z;
+        const B = lx * d.x + ly * d.y + lz * d.z, C = lx * lx + ly * ly + lz * lz - tg.r * tg.r, disc = B * B - C;
+        if (disc < 0) continue;
+        const t = -B - Math.sqrt(disc);
+        if (t >= 0 && t < best) { best = t; target = tg; hitAgent = null; }
+      }
+    }
     const point = { x: o.x + d.x * best, y: o.y + d.y * best, z: o.z + d.z * best };
+    if (target) { match.hitTarget(target); return { agent: null, target, t: best, point }; }
     if (hitAgent) return { agent: hitAgent, zone, t: best, point };
     return { agent: null, t: best, point, wall };
   };

@@ -168,7 +168,7 @@
       const geo = B.geometry();
       geo.setAttribute('uv2', new THREE.Float32BufferAttribute(B.uv2, 2));
       const tex = TAC.texture(key === 'f1' ? th.floor1 : th.floor2, hi);
-      const baked = new THREE.MeshBasicMaterial({ map: tex, lightMap: lmSun, lightMapIntensity: Math.PI * 1.05 });
+      const baked = new THREE.MeshBasicMaterial({ map: tex, lightMap: lmSun, lightMapIntensity: 1.05 });
       const live = new THREE.MeshLambertMaterial({ map: tex, lightMap: lmAO, lightMapIntensity: 0.55 });
       const mesh = new THREE.Mesh(geo, baked);
       mesh.receiveShadow = true;
@@ -214,7 +214,7 @@
       setDistance(dist) { fog.near = Math.max(10, dist * 0.35); fog.far = dist; },
       setBrightness(k) {
         hemi.intensity = 0.78 * k; sun.intensity = 0.78 * k;
-        for (const m of floorMeshes) { m.userData.baked.lightMapIntensity = Math.PI * 1.05 * k; m.userData.live.lightMapIntensity = 0.55 * k; }
+        for (const m of floorMeshes) { m.userData.baked.lightMapIntensity = 1.05 * k; m.userData.live.lightMapIntensity = 0.55 * k; }
       },
       dispose() {
         group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });

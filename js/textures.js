@@ -215,7 +215,7 @@
     lava: (S, H) => { const nz = makeNoise(50); return paint(S, (x, y) => { const v = nz.fbm(x / 22, y / 22, 5); const e = Math.abs(v - 0.5); if (e < 0.03) return [255, cl(200 - e * 3000), 40]; if (e < 0.07) return [220, 70, 10]; return [cl(30 + v * 20), cl(20 + v * 10), 18]; }, H); },
     fade: (S, H) => paint(S, (x, y) => { const c = grad([[0, 250, 220, 60], [0.35, 255, 90, 150], [0.7, 150, 60, 230], [1, 60, 40, 200]], x / S * 0.8 + y / H * 0.2); return [cl(c[0]), cl(c[1]), cl(c[2])]; }, H),
     emerald: (S, H) => { const nz = makeNoise(51); return paint(S, (x, y) => { const v = nz.fbm(x / 16, y / 16, 4); const c = grad([[0, 5, 60, 30], [0.5, 20, 170, 90], [1, 150, 255, 190]], v); return [cl(c[0]), cl(c[1]), cl(c[2])]; }, H); },
-    gold: (S, H) => { const nz = makeNoise(52); return paint(S, (x, y) => { const eng = Math.sin(x / 4 + Math.sin(y / 9) * 3) * Math.sin(y / 4 + Math.sin(x / 11) * 2); const k = 0.8 + nz.fbm(x / 20, y / 20, 3) * 0.3 + (eng > 0.7 ? -0.25 : 0); return [cl(230 * k), cl(180 * k), cl(70 * k)]; }, H),
+    gold: (S, H) => { const nz = makeNoise(52); return paint(S, (x, y) => { const eng = Math.sin(x / 4 + Math.sin(y / 9) * 3) * Math.sin(y / 4 + Math.sin(x / 11) * 2); const k = 0.8 + nz.fbm(x / 20, y / 20, 3) * 0.3 + (eng > 0.7 ? -0.25 : 0); return [cl(230 * k), cl(180 * k), cl(70 * k)]; }, H); },
   };
   const skinCache = {};
   TAC.skinCanvas = function (pattern) { return PAT[pattern] ? PAT[pattern](128, 64) : PAT.factory(128, 64); };

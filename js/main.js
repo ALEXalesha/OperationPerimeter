@@ -22,7 +22,10 @@
     if (app.renderer) {                                 // сглаживание меняется только с новым холстом
       canvas = document.createElement('canvas'); canvas.id = 'view';
       old.replaceWith(canvas);
+      // старый контекст отпускаем сразу, иначе браузер копит их и пишет «Too many active WebGL contexts»
       app.renderer.dispose();
+      app.renderer.forceContextLoss();
+      app.renderer.domElement.width = app.renderer.domElement.height = 1;
     }
     const r = new THREE.WebGLRenderer({ canvas, antialias: v.aa === 'on', powerPreference: 'high-performance' });
     r.autoClear = false;

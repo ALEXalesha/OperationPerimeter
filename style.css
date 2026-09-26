@@ -208,6 +208,7 @@ body.ingame #shade { opacity: 0; }
 /* ---------- бой ---------- */
 #hud { position: fixed; inset: 0; pointer-events: none; display: none; z-index: 5; color: var(--hud); }
 body.ingame #hud { display: block; }
+body.over #hud, body.over #roundbanner { display: none !important; }
 #hud .radarbox { position: absolute; left: 14px; top: 14px; transform-origin: top left; transform: scale(var(--hud-scale)); }
 #radar { width: 200px; height: 200px; display: block; border-radius: 4px; background: rgba(8, 12, 16, 0.55); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12); }
 .money { margin-top: 6px; font-size: 20px; font-weight: 700; color: #8fdc8f; text-shadow: 0 1px 3px #000; display: flex; align-items: center; gap: 8px; }

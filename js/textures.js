@@ -254,6 +254,7 @@
       g.fillStyle = rg; g.fillRect(0, 0, W, H);
     }
     const t = new THREE.CanvasTexture(c);
+    t.wrapS = THREE.RepeatWrapping;
     return t;
   };
 

@@ -226,6 +226,8 @@
     if (document.pointerLockElement) { TAC.app.expectUnlock = true; document.exitPointerLock(); }
     TAC.app.paused = true;
     TAC.hud.showBuy(false); TAC.hud.showScoreboard(false);
+    document.body.classList.add('over');
+    $('roundbanner').className = '';
     const res = $('moRes');
     let title, cls;
     if (s.mode === 'train') { title = 'Разминка окончена'; cls = 'draw'; }
@@ -240,11 +242,11 @@
     let mvp = null;
     for (const a of m.agents) if (!mvp || a.stats.mvp > mvp.stats.mvp || (a.stats.mvp === mvp.stats.mvp && a.stats.score > mvp.stats.score)) mvp = a;
     $('moMvp').style.display = s.mode === 'train' ? 'none' : '';
-    $('moMvp').innerHTML = mvp ? `★ Лучший игрок матча: <b>${esc(mvp.name)}</b> · ${mvp.stats.k} убийств${mvp.stats.mvp ? ' · ' + mvp.stats.mvp + ' раз лучший в раунде' : ''}` : '';
+    $('moMvp').innerHTML = mvp ? `★ Лучший игрок матча: <b>${esc(mvp.name)}</b> · убийств: ${mvp.stats.k}${mvp.stats.mvp ? ' · лучший в раунде: ' + mvp.stats.mvp : ''}` : '';
     let rwHtml = `<div>◆ <b>+${rw ? rw.tokens : 0}</b> жетонов</div>`;
     if (rw && rw.rank) {
       const d = rw.rank.after - rw.rank.before;
-      rwHtml += `<div>${TAC.rankIcon(rw.rank.rankAfter, 28)} ${TAC.RANKS[rw.rank.rankAfter].name} <span style="color:${d > 0 ? '#6fcf97' : d < 0 ? '#ff6b6b' : '#8e99a6'}">${d > 0 ? '+' : ''}${d} очков</span>${rw.rank.rankAfter > rw.rank.rankBefore ? ' · <b style="color:#6fcf97">новое звание!</b>' : rw.rank.rankAfter < rw.rank.rankBefore ? ' · звание понижено' : ''}</div>`;
+      rwHtml += `<div>${TAC.rankIcon(rw.rank.rankAfter, 28)} ${TAC.RANKS[rw.rank.rankAfter].name} <span style="color:${d > 0 ? '#6fcf97' : d < 0 ? '#ff6b6b' : '#8e99a6'}">${rw.rank.after} очков (${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)})</span>${rw.rank.rankAfter > rw.rank.rankBefore ? ' · <b style="color:#6fcf97">новое звание!</b>' : rw.rank.rankAfter < rw.rank.rankBefore ? ' · звание понижено' : ''}</div>`;
     }
     if (rw && rw.mission) rwHtml += `<div>Миссия: <b style="color:#f6cf7a">${'★'.repeat(rw.mission.stars)}${'☆'.repeat(3 - rw.mission.stars)}</b>${rw.mission.stars ? '' : ' условие не выполнено'}</div>`;
     $('moRewards').innerHTML = rwHtml;
@@ -282,7 +284,7 @@
     g.fillStyle = 'rgba(0,0,0,.45)'; g.save(); g.translate(0.8, 1); g.fill(path); g.restore();
     const pc = TAC.skinCanvas(pattern || 'factory');
     const pat = g.createPattern(pc, 'repeat');
-    const mtx = new DOMMatrix().scale(0.5 / Math.max(1, k / 6), 0.5 / Math.max(1, k / 6));
+    const mtx = new DOMMatrix().scale(0.22, 0.22);
     if (pat.setTransform) pat.setTransform(mtx);
     g.fillStyle = pat; g.fill(path);
     const gr = g.createLinearGradient(0, 0, 0, 20);

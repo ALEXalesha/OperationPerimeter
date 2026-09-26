@@ -109,7 +109,7 @@
     this.scene.add(new THREE.HemisphereLight(0xfff4e0, 0x404040, 0.95));
     const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(0.5, 1, 0.6); this.scene.add(sun);
     this.root = new THREE.Group(); this.scene.add(this.root);
-    this.root.scale.setScalar(0.85);
+    this.root.scale.setScalar(0.7);
     this.holder = new THREE.Group(); this.root.add(this.holder);
     this.cache = new Map();
     this.key = null; this.model = null; this.skin = null; this.skinMat = null;
@@ -166,9 +166,9 @@
     this.throwT = Math.max(0, this.throwT - dt * 2.5);
     this.swayX *= Math.exp(-8 * dt); this.swayY *= Math.exp(-8 * dt);
     const o = this.offset;
-    let x = 0.15 + o.x + Math.sin(this.bobT) * 0.012 * amp + this.swayX;
-    let y = -0.155 + o.y - Math.abs(Math.cos(this.bobT)) * 0.012 * amp + this.swayY;
-    let z = -0.36 + o.z + this.kick * 0.035;
+    let x = 0.13 + o.x + Math.sin(this.bobT) * 0.012 * amp + this.swayX;
+    let y = -0.13 + o.y - Math.abs(Math.cos(this.bobT)) * 0.012 * amp + this.swayY;
+    let z = -0.3 + o.z + this.kick * 0.035;
     let rx = this.kick * 0.07, ry = 0, rz = 0;
     // доставание
     y -= this.draw * this.draw * 0.25; rx -= this.draw * 0.7;

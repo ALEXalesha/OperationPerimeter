@@ -82,6 +82,7 @@
 
   // ---------- Матч ----------
   function disposeGame() {
+    if (app.disposeTargets) { app.disposeTargets(); app.disposeTargets = null; }
     if (app.mapRender) { app.scene.remove(app.mapRender.group); app.mapRender.dispose(); app.mapRender = null; }
     if (app.match) for (const a of app.match.agents) a.removeMesh();
     if (app.effects) { app.effects.clearRound(); app.scene.remove(app.effects.group); app.effects = null; }
@@ -114,6 +115,7 @@
     app.mode = 'game';
     app.paused = false;
     app.acc = 0;
+    document.body.classList.remove('over');
     app.targetMeshes = [];
     if (m.targets) buildTargets(m);
     document.body.classList.add('ingame');
@@ -178,6 +180,7 @@
   };
   function hideGameOverlays() {
     for (const id of ['pause', 'matchover', 'clickin']) $(id).classList.remove('show');
+    document.body.classList.remove('over');
     TAC.hud.showBuy(false); TAC.hud.showScoreboard(false);
     $('roundbanner').className = '';
     $('pauseSettingsHost').classList.remove('show');

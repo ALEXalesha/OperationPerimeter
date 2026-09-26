@@ -30,7 +30,8 @@
 
   P.onRoundStart = function () {
     const m = this.m, b = this.bot;
-    this.path = null; this.goal = null; this.target = null; this.lastSeen = null; this.heard = null;
+    this.resetNav();
+    this.target = null; this.lastSeen = null; this.heard = null;
     this.state = 'idle'; this.bought = false; this.buyAt = m.time + 0.3 + m.rng() * 2.5;
     this.retreatUntil = 0; this.throwPlan = null; this.executed = false; this.noiseSeen = m.time;
     // план команды выбирает первый живой бот стороны
@@ -50,7 +51,13 @@
       }
     }
   };
-  P.onRespawn = function () { this.path = null; this.goal = null; this.target = null; this.lastSeen = null; this.state = 'idle'; };
+  // Новый раунд или возрождение: забыть прошлую цель целиком, иначе «hold»/«stage» прошлого раунда
+  // считались достигнутыми и бот стоял на базе
+  P.resetNav = function () {
+    this.path = null; this.pi = 0; this.goal = null; this.goalKind = null; this.repathAt = 0;
+    this.role = null; this.holdSpot = null; this.coverGoal = null; this.stuckT = 0;
+  };
+  P.onRespawn = function () { this.resetNav(); this.target = null; this.lastSeen = null; this.state = 'idle'; };
   P.onDamaged = function (attacker) {
     if (!attacker || attacker === this.bot) return;
     if (!this.lastSeen || this.m.time - this.lastSeen.time > 1) this.lastSeen = { pos: { x: attacker.pos.x, y: attacker.pos.y, z: attacker.pos.z }, time: this.m.time, agent: attacker };
@@ -151,8 +158,11 @@
     if (tgt !== this.target) {
       if (tgt) {
         const known = this.lastSeen && this.lastSeen.agent === tgt && m.time - this.lastSeen.time < 1.5;
-        this.reactAt = m.time + this.d.reaction * (known ? 0.4 : 0.8 + m.rng() * 0.5);
-        const e = this.d.aimErr * DEG * (0.6 + m.rng() * 0.8), ang = m.rng() * Math.PI * 2;
+        // держит угол (стоит на позиции и смотрит в проход) - реагирует быстрее и точнее того, кто выходит
+        const holding = Math.hypot(b.vel.x, b.vel.z) < 0.6 && (this.goalKind === 'hold' || this.goalKind === 'post' || this.goalKind === 'stage') && this.arrived();
+        const edge = holding ? 0.6 : 1;
+        this.reactAt = m.time + this.d.reaction * edge * (known ? 0.4 : 0.8 + m.rng() * 0.5);
+        const e = this.d.aimErr * DEG * edge * (0.6 + m.rng() * 0.8), ang = m.rng() * Math.PI * 2;
         this.err.x = Math.cos(ang) * e; this.err.y = Math.sin(ang) * e * 0.7;
         this.aimZone = m.rng() < this.d.head ? 'head' : 'chest';
       }
@@ -377,7 +387,11 @@
     }
     const cp = m.ctPlan || { roles: new Map(), rotate: null };
     let role = cp.roles.get(b.id) || 'mid';
-    if (cp.rotate && role !== cp.rotate.site && m.time - cp.rotate.time < 25 && (b.id % 2 === 0 || role === 'mid')) role = cp.rotate.site;
+    // переход на точку: идут все, кроме одного «якоря» на другой точке
+    if (cp.rotate && role !== cp.rotate.site && m.time - cp.rotate.time < 30) {
+      const anchor = m.agents.find((a) => a.alive && a.team === 'CT' && a.isBot && cp.roles.get(a.id) === role && role !== 'mid');
+      if (anchor !== b) role = cp.rotate.site;
+    }
     const holds = plan.hold[role] || plan.hold.mid || [];
     if (this.role !== role || !this.holdSpot) {
       this.role = role;

@@ -38,6 +38,7 @@
   hud.reset = function (match) {
     hud.cache = {}; hud.lastEvent = match.eventId || 0; hud.msgUntil = 0;
     $('killfeed').innerHTML = ''; $('centermsg').innerHTML = ''; $('dmgind').innerHTML = '';
+    for (const el of Array.from($('money').querySelectorAll('small'))) el.remove();
     $('roundbanner').className = '';
     hud.radarImg = TAC.drawMapPreview(match.world, 8, { radar: true });
     hud.radarWorld = match.world;

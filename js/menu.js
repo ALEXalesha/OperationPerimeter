@@ -176,6 +176,8 @@
     g.drawImage(cv, (lp.width - cv.width * k) / 2, (lp.height - cv.height * k) / 2, cv.width * k, cv.height * k);
     $('loadTip').textContent = TAC.TIPS[Math.floor(Math.random() * TAC.TIPS.length)];
     $('loadBar').style.width = '0%';
+    const tint = { sand: '#6b4d24', port: '#27425e', range: '#3d4a2a' }[TAC.MAPS[opts.map].theme] || '#333';
+    $('loadBg').style.background = `radial-gradient(ellipse at 70% 40%, ${tint}, #07090c 70%)`;
     $('loading').classList.add('show');
   };
   M.loadingProgress = function (p, label) { $('loadBar').style.width = (p * 100).toFixed(0) + '%'; $('loadStatus').textContent = label + '...'; };

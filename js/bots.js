@@ -17,7 +17,7 @@
     this.state = 'idle'; this.stateUntil = 0;
     this.look = null; this.holdLook = null;
     this.visIdx = (bot.id * 3) % 4;
-    this.stuckT = 0; this.lastPos = { x: 0, z: 0 };
+    this.stuckT = 0; this.lastPos = { x: 0, z: 0 }; this.nudge = 1;
     this.bought = false; this.buyAt = 0;
     this.burst = 0; this.pauseFire = 0;
     this.visible = [];
@@ -170,9 +170,9 @@
     const w = b.weapon();
     if (b.slot === 'bomb' && this.state !== 'plant') m.switchSlot(b, m.bestSlot(b));
     if (b.slot === 'grenade' && !this.throwPlan) m.switchSlot(b, m.bestSlot(b));
-    if (b.slot === 'knife' && (b.inv.primary || b.inv.secondary) && !this.knifeRun) m.switchSlot(b, m.bestSlot(b));
+    if (b.slot === 'knife' && m.bestSlot(b) !== 'knife') m.switchSlot(b, m.bestSlot(b));
     if (!w || !w.def.mag) return;
-    if (w.mag === 0 && w.reserve === 0) { if (b.slot === 'primary' && b.inv.secondary) m.switchSlot(b, 'secondary'); else m.switchSlot(b, 'knife'); return; }
+    if (w.mag === 0 && w.reserve === 0) { m.switchSlot(b, m.bestSlot(b)); return; }
     if (b.slot === 'secondary' && b.inv.primary && (b.inv.primary.mag + b.inv.primary.reserve) > 0 && !this.target) m.switchSlot(b, 'primary');
     if (w.mag === 0) inp.reload = true;
     else if (!this.target && w.mag < w.def.mag * 0.4 && w.reserve > 0 && (!this.lastSeen || m.time - this.lastSeen.time > 1.5)) inp.reload = true;
@@ -201,7 +201,7 @@
     const lowHp = b.hp < 30 && dist > 8;
     if ((reloading || lowHp) && m.time > this.retreatUntil - 3) {
       if (!this.coverGoal || m.time > this.retreatUntil) { this.coverGoal = this.findCover(tgt); this.retreatUntil = m.time + 2.5; }
-      if (this.coverGoal) { this.moveTo(this.coverGoal, 'cover'); this.followPath(inp, true); return; }
+      if (this.coverGoal) { this.goTo(this.coverGoal, 'cover'); this.followPath(inp, true); return; }
     }
     const angErr = Math.hypot(TAC.wrapAngle(want.yaw - b.yaw), want.pitch - b.pitch);
     const tol = Math.atan2(this.aimZone === 'head' ? 0.18 : 0.3, Math.max(1, dist)) + 0.012;
@@ -209,7 +209,7 @@
     let shoot = ready && angErr < tol * 2.2;
     if (def.cat === 'knife') {
       // с ножом - бежать к цели
-      this.moveTo(tgt.pos, 'chase'); this.followPath(inp, true);
+      this.goTo(tgt.pos, 'chase'); this.followPath(inp, true);
       shoot = ready && dist < 1.6;
       inp.fire = shoot;
       return;
@@ -300,7 +300,7 @@
       const tp = m.tPlan || { site: 'A', split: false, go: false, t0: m.liveStart };
       // бомба лежит - поднять
       if (bomb.state === 'dropped' && bomb.item && this.closestTo(bomb.item.pos, 'T') === b) {
-        this.moveTo(bomb.item.pos, 'bomb'); this.followPath(inp, true); this.lookWhileMoving(dt, recent); return;
+        this.goTo(bomb.item.pos, 'bomb'); this.followPath(inp, true); this.lookWhileMoving(dt, recent); return;
       }
       if (bomb.state === 'planted') {
         // охрана заложенной бомбы
@@ -383,8 +383,8 @@
       this.role = role;
       const idx = (b.id + m.round) % Math.max(1, holds.length);
       this.holdSpot = holds[idx];
-      if (this.holdSpot) this.moveTo(w.center(this.holdSpot[0], this.holdSpot[1]), 'hold');
     }
+    if (this.holdSpot && this.goalKind !== 'hold') this.moveTo(w.center(this.holdSpot[0], this.holdSpot[1]), 'hold');
     if (recent && this.heard && m.time - this.heard.time < 1 && this.heard.kind === 'step' && TAC.dist2d(this.heard.pos, b.pos) < 12) {
       // слышит шаги рядом - присесть и смотреть туда
       this.watch(dt, this.heard.pos); inp.crouch = this.d.stopToShoot; return;
@@ -439,11 +439,11 @@
     const cur = b.inv.primary ? b.inv.primary.def.price : 0;
     for (const it of m.drops) {
       if (it.bomb || it.def.slot !== 'primary' || it.def.price <= cur + 300) continue;
-      if (it.weapon.mag + it.weapon.reserve <= 0) continue;
+      if (it.weapon.mag + it.weapon.reserve <= 0 || it.pos.y > 0.5 || !m.world.pointWalkable(it.pos.x, it.pos.z)) continue;   // на ящике не достать
       const d = TAC.dist2d(it.pos, b.pos);
       if (d < 12) {
         if (d < 1.4) { m.tryPickup(b, true); return; }
-        if (this.goalKind !== 'pickup') this.moveTo(it.pos, 'pickup');
+        this.goTo(it.pos, 'pickup');
         return;
       }
     }
@@ -469,6 +469,13 @@
     this.path = m.world.findPath(b.pos, this.goal) || [];
     this.pi = 0;
   };
+  // Идти к цели, но путь пересчитывать только при смене цели или раз в секунду
+  P.goTo = function (pos, kind) {
+    const g = this.goal;
+    if (!g || this.goalKind !== kind || Math.hypot(g.x - pos.x, g.z - pos.z) > 1.5 || this.m.time > (this.repathAt || 0)) {
+      this.moveTo(pos, kind); this.repathAt = this.m.time + 1;
+    }
+  };
   P.arrived = function () { return !this.goal || TAC.dist2d(this.bot.pos, this.goal) < 0.8; };
   P.followPath = function (inp, run) {
     const m = this.m, b = this.bot;
@@ -476,12 +483,16 @@
     let wp = this.path[this.pi];
     if (TAC.dist2d(b.pos, wp) < 0.55) { this.pi++; if (this.pi >= this.path.length) return; wp = this.path[this.pi]; }
     let dx = wp.x - b.pos.x, dz = wp.z - b.pos.z;
-    // расходиться с соседями
-    for (const a of m.agents) {
-      if (a === b || !a.alive) continue;
-      const ox = b.pos.x - a.pos.x, oz = b.pos.z - a.pos.z, d = Math.hypot(ox, oz);
-      if (d < 0.9 && d > 1e-3) { dx += ox / d * 0.8; dz += oz / d * 0.8; }
-    }
+    // расходиться с соседями: вбок, не назад, и не когда застрял
+    const L = Math.hypot(dx, dz) || 1;
+    dx /= L; dz /= L;
+    if (this.stuckT < 2) {
+      for (const a of m.agents) {
+        if (a === b || !a.alive) continue;
+        const ox = b.pos.x - a.pos.x, oz = b.pos.z - a.pos.z, d = Math.hypot(ox, oz);
+        if (d < 0.9 && d > 1e-3) { const side = (ox * -dz + oz * dx) >= 0 ? 1 : -1; dx += -dz * side * 0.35; dz += dx * side * 0.35; }
+      }
+    } else { dx += -dz * this.nudge * 0.5; dz += dx * this.nudge * 0.5; }
     const want = Math.atan2(-dx, -dz);
     const rel = TAC.wrapAngle(want - b.yaw);
     inp.mz = Math.cos(rel); inp.mx = -Math.sin(rel);
@@ -490,7 +501,11 @@
     if (m.tickN % 32 === 0) {
       const moved = Math.hypot(b.pos.x - this.lastPos.x, b.pos.z - this.lastPos.z);
       this.lastPos.x = b.pos.x; this.lastPos.z = b.pos.z;
-      if (moved < 0.25) { this.stuckT++; if (this.stuckT > 1) { this.path = m.world.findPath(b.pos, this.goal) || []; this.pi = 0; inp.jump = this.stuckT > 3; } } else this.stuckT = 0;
+      if (moved < 0.25 && inp.mx * inp.mx + inp.mz * inp.mz > 0.1) {
+        this.stuckT++;
+        if (this.stuckT > 1) { this.path = m.world.findPath(b.pos, this.goal, true) || []; this.pi = 0; this.nudge = m.rng() < 0.5 ? -1 : 1; }
+        inp.jump = this.stuckT === 4;
+      } else if (moved > 0.6) this.stuckT = 0;
     }
   };
   P.lookWhileMoving = function (dt, recent) {

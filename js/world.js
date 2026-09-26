@@ -288,7 +288,7 @@
   };
 
   // ---------- Путь по клеткам (A*) ----------
-  P.findPath = function (from, to) {
+  P.findPath = function (from, to, raw) {
     const W = this.W;
     let [sx, sy] = this.cellOf(from.x, from.z);
     let [gx, gy] = this.cellOf(to.x, to.z);
@@ -329,13 +329,14 @@
     cells.reverse();
     const pts = cells.map((k) => this.center(k % W, (k / W) | 0));
     pts[pts.length - 1] = { x: to.x, y: 0, z: to.z };
-    // Спрямление: пропускаем точки, если до следующей можно дойти по прямой
+    if (raw) return pts.slice(1).map((q) => ({ x: q.x, z: q.z }));
+    // Спрямление: пропускаем точки, если до следующей можно дойти по прямой (с запасом от углов)
     const out = [];
     let i = 0;
     const cur = { x: from.x, z: from.z };
     while (i < pts.length) {
       let j = pts.length - 1;
-      while (j > i && !this.lineWalkable(cur, pts[j], 0.4)) j--;
+      while (j > i && !this.lineWalkable(cur, pts[j], 0.62)) j--;
       out.push({ x: pts[j].x, z: pts[j].z });
       cur.x = pts[j].x; cur.z = pts[j].z;
       i = j + 1;

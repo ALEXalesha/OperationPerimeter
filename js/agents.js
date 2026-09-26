@@ -6,6 +6,8 @@
   TAC.STAND_H = STAND_H; TAC.CROUCH_H = CROUCH_H; TAC.RADIUS = RADIUS;
 
   let nextId = 1;
+  // номера бойцов - свои в каждом матче, иначе поведение ботов зависело бы от прошлых матчей
+  TAC.resetAgentIds = () => { nextId = 1; };
   function Agent(o) {
     this.id = nextId++;
     this.name = o.name || 'Игрок';

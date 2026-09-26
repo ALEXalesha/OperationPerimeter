@@ -13,6 +13,7 @@
 
   function Match(opts, env) {
     env = env || {};
+    TAC.resetAgentIds();
     this.opts = opts;
     this.env = env;
     this.mode = opts.mode || 'comp';
@@ -527,7 +528,11 @@
     a.fire.spray = 0; a.fire.inacc = 0; a.fire.punchX = 0; a.fire.punchY = 0;   // отдача прошлого оружия не переносится
     return true;
   };
-  P.bestSlot = function (a) { return a.inv.primary ? 'primary' : a.inv.secondary ? 'secondary' : 'knife'; };
+  // Лучшее оружие с патронами: основное, пистолет, нож
+  P.bestSlot = function (a) {
+    const has = (w) => w && (w.mag > 0 || w.reserve > 0);
+    return has(a.inv.primary) ? 'primary' : has(a.inv.secondary) ? 'secondary' : 'knife';
+  };
   P.lastWeapon = function (a) { if (!this.switchSlot(a, a.lastSlot)) this.switchSlot(a, this.bestSlot(a)); };
   P.dropCurrent = function (a) {
     const s = a.slot;

@@ -173,9 +173,11 @@
     const stamp = ++this.stamp;
     let cx = Math.floor(o.x / CELL), cz = Math.floor(o.z / CELL);
     const sx = d.x > 0 ? 1 : -1, sz = d.z > 0 ? 1 : -1;
-    const dX = Math.abs(CELL * ix), dZ = Math.abs(CELL * iz);
-    let tX = ((cx + (d.x > 0 ? 1 : 0)) * CELL - o.x) * ix;
-    let tZ = ((cz + (d.z > 0 ? 1 : 0)) * CELL - o.z) * iz;
+    // луч вдоль оси: по этой оси клетки не меняются (иначе шаг уходит в минус и стены пропускаются)
+    const flatX = Math.abs(d.x) < 1e-9, flatZ = Math.abs(d.z) < 1e-9;
+    const dX = flatX ? Infinity : Math.abs(CELL / d.x), dZ = flatZ ? Infinity : Math.abs(CELL / d.z);
+    let tX = flatX ? Infinity : ((cx + (d.x > 0 ? 1 : 0)) * CELL - o.x) / d.x;
+    let tZ = flatZ ? Infinity : ((cz + (d.z > 0 ? 1 : 0)) * CELL - o.z) / d.z;
     let tEnter = 0;
     for (let guard = 0; guard < 400; guard++) {
       if (tEnter > best) break;
@@ -189,6 +191,7 @@
           if (t >= 0 && t < best) { best = t; bestBox = b; }
         }
       } else if (tEnter > 0) break;
+      if (tX === Infinity && tZ === Infinity) break;
       if (tX < tZ) { tEnter = tX; tX += dX; cx += sx; } else { tEnter = tZ; tZ += dZ; cz += sz; }
     }
     if (!bestBox) return null;

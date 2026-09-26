@@ -6,7 +6,17 @@
   const S = TAC.store;
 
   // ---------- Настройки ----------
-  TAC.settings = TAC.mergeDefaults(TAC.DEFAULT_SETTINGS, S.get('settings', null));
+  // Сохранённое могло испортиться или устареть: числа - в пределы, значения - из допустимых
+  const num = (v, lo, hi, def) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def);
+  TAC.cleanSettings = function (s) {
+    const D = TAC.DEFAULT_SETTINGS;
+    for (const sec of Object.keys(TAC.SETTING_RANGES)) for (const [k, [lo, hi]] of Object.entries(TAC.SETTING_RANGES[sec])) s[sec][k] = num(s[sec][k], lo, hi, D[sec][k]);
+    for (const sec of Object.keys(TAC.SETTING_ENUMS)) for (const [k, list] of Object.entries(TAC.SETTING_ENUMS[sec])) if (!list.includes(s[sec][k])) s[sec][k] = D[sec][k];
+    for (const k of Object.keys(s.input.keys)) if (typeof s.input.keys[k] !== 'string') s.input.keys[k] = D.input.keys[k];
+    return s;
+  };
+  TAC.settings = TAC.cleanSettings(TAC.mergeDefaults(TAC.DEFAULT_SETTINGS, S.get('settings', null)));
+  { const rb = S.get('rangeBest', 0); if (typeof rb !== 'number' || !isFinite(rb) || rb < 0) S.set('rangeBest', 0); }
   // клавиши: новые действия получают свои умолчания
   TAC.saveSettings = function () { S.set('settings', TAC.settings); };
   TAC.resetSettings = function (section) {
@@ -79,10 +89,23 @@
 
   // ---------- Инвентарь и кейсы ----------
   const INV_DEF = { tokens: TAC.TOKENS.start, items: [], equipped: {}, nextUid: 1, opened: 0 };
+  function cleanInventory(d) {
+    d.tokens = Math.floor(num(d.tokens, 0, 1e7, TAC.TOKENS.start));
+    const seen = new Set();
+    d.items = (Array.isArray(d.items) ? d.items : []).filter((i) => i && typeof i === 'object' && typeof i.uid === 'number' && isFinite(i.uid) && !seen.has(i.uid) && seen.add(i.uid)
+      && TAC.WEAPONS[i.weapon] && ['primary', 'secondary', 'knife'].includes(TAC.WEAPONS[i.weapon].slot) && TAC.PATTERNS[i.pattern]);
+    for (const i of d.items) i.rarity = TAC.PATTERNS[i.pattern].rarity;
+    const eq = {};
+    for (const [w, uid] of Object.entries(d.equipped && typeof d.equipped === 'object' ? d.equipped : {})) { const it = d.items.find((i) => i.uid === uid); if (it && it.weapon === w) eq[w] = uid; }
+    d.equipped = eq;
+    d.nextUid = Math.max(1, Math.floor(num(d.nextUid, 1, 1e9, 1)), ...d.items.map((i) => i.uid + 1));
+    d.opened = Math.floor(num(d.opened, 0, 1e9, 0));
+    return d;
+  }
   const inv = TAC.inventory = {
-    data: TAC.mergeDefaults(INV_DEF, S.get('inventory', null)),
+    data: cleanInventory(TAC.mergeDefaults(INV_DEF, S.get('inventory', null))),
     save() { S.set('inventory', this.data); },
-    reload() { this.data = TAC.mergeDefaults(INV_DEF, S.get('inventory', null)); },
+    reload() { this.data = cleanInventory(TAC.mergeDefaults(INV_DEF, S.get('inventory', null))); },
     item(uid) { return this.data.items.find((i) => i.uid === uid) || null; },
     skinFor(weaponId) { const uid = this.data.equipped[weaponId]; const it = uid && this.item(uid); return it ? it.pattern : null; },
     equip(weaponId, uid) {
@@ -116,10 +139,18 @@
 
   // ---------- Статистика ----------
   const STATS_DEF = { matches: 0, wins: 0, losses: 0, draws: 0, kills: 0, deaths: 0, assists: 0, shots: 0, hits: 0, headHits: 0, hsKills: 0, damage: 0, mvps: 0, roundsPlayed: 0, roundsWon: 0, plants: 0, defuses: 0, weaponKills: {}, byMode: { comp: 0, dm: 0, tdm: 0 } };
+  function cleanStats(d) {
+    for (const k of Object.keys(STATS_DEF)) if (typeof STATS_DEF[k] === 'number') d[k] = Math.floor(num(d[k], 0, 1e12, 0));
+    const wk = {};
+    for (const [w, n] of Object.entries(d.weaponKills && typeof d.weaponKills === 'object' ? d.weaponKills : {})) if (TAC.WEAPONS[w] && typeof n === 'number' && isFinite(n) && n > 0) wk[w] = Math.floor(n);
+    d.weaponKills = wk;
+    for (const k of Object.keys(STATS_DEF.byMode)) d.byMode[k] = Math.floor(num(d.byMode[k], 0, 1e12, 0));
+    return d;
+  }
   TAC.stats = {
-    data: TAC.mergeDefaults(STATS_DEF, S.get('stats', null)),
+    data: cleanStats(TAC.mergeDefaults(STATS_DEF, S.get('stats', null))),
     save() { S.set('stats', this.data); },
-    reload() { this.data = TAC.mergeDefaults(STATS_DEF, S.get('stats', null)); },
+    reload() { this.data = cleanStats(TAC.mergeDefaults(STATS_DEF, S.get('stats', null))); },
     record(s, abandoned) {
       if (s.mode === 'train') return;
       const d = this.data;
@@ -160,10 +191,11 @@
     if (result === 'loss') return Math.max(0, points + R.loss[diff]);
     return points;
   };
+  function cleanProfile(d) { d.rankPoints = Math.floor(num(d.rankPoints, 0, 1e6, 0)); d.rankedMatches = Math.floor(num(d.rankedMatches, 0, 1e9, 0)); return d; }
   TAC.profile = {
-    data: TAC.mergeDefaults({ rankPoints: 0, rankedMatches: 0 }, S.get('profile', null)),
+    data: cleanProfile(TAC.mergeDefaults({ rankPoints: 0, rankedMatches: 0 }, S.get('profile', null))),
     save() { S.set('profile', this.data); },
-    reload() { this.data = TAC.mergeDefaults({ rankPoints: 0, rankedMatches: 0 }, S.get('profile', null)); },
+    reload() { this.data = cleanProfile(TAC.mergeDefaults({ rankPoints: 0, rankedMatches: 0 }, S.get('profile', null))); },
     rank() { return TAC.rankOf(this.data.rankPoints); },
     applyMatch(s) {
       if (s.mode !== 'comp') return null;
@@ -192,10 +224,18 @@
   };
 
   // ---------- Кампания ----------
+  function cleanCampaign(d) {
+    const st = {};
+    const src = d.stars && typeof d.stars === 'object' ? d.stars : {};
+    for (const m of TAC.MISSIONS) if (m.id in src) st[m.id] = typeof src[m.id] === 'number' && isFinite(src[m.id]) ? Math.max(0, Math.min(3, Math.floor(src[m.id]))) : 0;
+    d.stars = st;
+    d.finished = d.finished === true && (st.m8 || 0) > 0;
+    return d;
+  }
   TAC.campaign = {
-    data: TAC.mergeDefaults({ stars: {}, finished: false }, S.get('campaign', null)),
+    data: cleanCampaign(TAC.mergeDefaults({ stars: {}, finished: false }, S.get('campaign', null))),
     save() { S.set('campaign', this.data); },
-    reload() { this.data = TAC.mergeDefaults({ stars: {}, finished: false }, S.get('campaign', null)); },
+    reload() { this.data = cleanCampaign(TAC.mergeDefaults({ stars: {}, finished: false }, S.get('campaign', null))); },
     unlocked(id) {
       const i = TAC.MISSIONS.findIndex((m) => m.id === id);
       if (i <= 0) return true;

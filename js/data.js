@@ -301,6 +301,20 @@
     audio: { master: 0.7, effects: 0.8, steps: 0.8, music: 0.35, eq: 'natural' },
     input: { sens: 1.6, zoomSens: 1, rawInput: true, accel: false, invertY: false, keys },
   };
+  // Пределы и допустимые значения настроек (как у ползунков и переключателей в меню)
+  TAC.SETTING_RANGES = {
+    game: { fov: [75, 100], hudScale: [0.8, 1.3], radarZoom: [0.5, 2], vmFov: [54, 90], vmX: [-0.06, 0.06], vmY: [-0.06, 0.06], vmZ: [-0.06, 0.06], dmLimit: [5, 100] },
+    crosshair: { size: [0, 10], thickness: [0, 5], gap: [-5, 5], outlineThickness: [0.5, 3], r: [0, 255], g: [0, 255], b: [0, 255], alpha: [0, 255] },
+    video: { renderScale: [0.5, 1], brightness: [0.7, 1.4], distance: [60, 200] },
+    audio: { master: [0, 1], effects: [0, 1], steps: [0, 1], music: [0, 1] },
+    input: { sens: [0.1, 8], zoomSens: [0.2, 2] },
+  };
+  TAC.SETTING_ENUMS = {
+    game: { difficulty: ['easy', 'medium', 'hard', 'expert'], side: ['auto', 'T', 'CT'], matchLength: ['short', 'long'], hudColor: ['white', 'blue', 'green', 'yellow', 'red', 'purple'] },
+    crosshair: { style: ['static', 'dynamic'], color: ['green', 'yellow', 'blue', 'cyan', 'red', 'white', 'custom'] },
+    video: { preset: ['low', 'medium', 'high', 'ultra', 'custom'], shadows: ['off', 'low', 'high'], textures: ['low', 'high'], aa: ['off', 'on'], particles: ['low', 'high'] },
+    audio: { eq: ['natural', 'crisp'] },
+  };
   TAC.HUD_COLORS = { white: '#f2f2f2', blue: '#7fb2ff', green: '#78e08f', yellow: '#f5d76e', red: '#ff7a7a', purple: '#c9a0ff' };
   TAC.XHAIR_COLORS = { green: [80, 250, 80], yellow: [250, 240, 70], blue: [70, 160, 255], cyan: [60, 240, 240], red: [255, 60, 60], white: [255, 255, 255] };
   TAC.VIDEO_PRESETS = {

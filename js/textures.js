@@ -229,7 +229,9 @@
   };
 
   // Небо: вертикальный градиент, облака и солнце - развёртка на сферу.
+  const skyCache = {};
   TAC.skyTexture = function (kind) {
+    if (skyCache[kind]) return skyCache[kind];
     const W = 512, H = 256, c = canvas(W, H), g = c.getContext('2d');
     const nz = makeNoise(kind === 'overcast' ? 61 : 60);
     const top = kind === 'overcast' ? [96, 118, 142] : [58, 112, 186];
@@ -255,6 +257,7 @@
     }
     const t = new THREE.CanvasTexture(c);
     t.wrapS = THREE.RepeatWrapping;
+    skyCache[kind] = t;
     return t;
   };
 
@@ -289,7 +292,9 @@
     };
   })();
   // Надпись зоны закладки краской на полу
+  const letterCache = {};
   TAC.letterTexture = function (letter) {
+    if (letterCache[letter]) return letterCache[letter];
     const c = canvas(128, 128), g = c.getContext('2d');
     g.clearRect(0, 0, 128, 128);
     g.font = 'bold 96px Impact, "Arial Black", sans-serif';
@@ -300,6 +305,7 @@
     const nz = makeNoise(letter.charCodeAt(0));
     for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(0,0,0,${nz.rng() * 0.6})`; g.fillRect(nz.rng() * 128, nz.rng() * 128, 2, 2); }
     const t = new THREE.CanvasTexture(c);
+    letterCache[letter] = t;
     return t;
   };
 })();

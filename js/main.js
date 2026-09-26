@@ -85,7 +85,7 @@
     if (app.disposeTargets) { app.disposeTargets(); app.disposeTargets = null; }
     if (app.mapRender) { app.scene.remove(app.mapRender.group); app.mapRender.dispose(); app.mapRender = null; }
     if (app.match) for (const a of app.match.agents) a.removeMesh();
-    if (app.effects) { app.effects.clearRound(); app.scene.remove(app.effects.group); app.effects = null; }
+    if (app.effects) app.effects.clearRound();
     app.match = null;
   }
   function onMatchOver(summary, match) {
@@ -103,7 +103,7 @@
     app.mapRender = TAC.buildMapMeshes(world, { textures: v.textures });
     app.scene.add(app.mapRender.group);
     app.scene.fog = app.mapRender.fog;
-    app.effects = new TAC.Effects(app.scene);
+    app.effects = app.effects || new TAC.Effects(app.scene);
     app.camera = app.camera || new THREE.PerspectiveCamera(74, innerWidth / innerHeight, 0.05, 200);
     app.vm = app.vm || new TAC.ViewModel();
     const env = { scene: app.scene, effects: app.effects, onMatchOver };
@@ -124,14 +124,14 @@
     if (TAC.audio) TAC.audio.stopMusic();
     return m;
   };
+  let tgtRes = null;
   function buildTargets(m) {
-    const geo = new THREE.SphereGeometry(0.5, 16, 12);
-    const mat = new THREE.MeshLambertMaterial({ color: 0xff3a4a, emissive: 0x661020 });
-    const ring = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    tgtRes = tgtRes || { geo: new THREE.SphereGeometry(0.5, 16, 12), torus: new THREE.TorusGeometry(0.3, 0.04, 6, 20), mat: new THREE.MeshLambertMaterial({ color: 0xff3a4a, emissive: 0x661020 }), ring: new THREE.MeshBasicMaterial({ color: 0xffffff }) };
+    const { geo, torus, mat, ring } = tgtRes;
     for (const t of m.targets) {
       const g = new THREE.Group();
       g.add(new THREE.Mesh(geo, mat));
-      const r = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.04, 6, 20), ring); r.position.z = 0.02; g.add(r);
+      const r = new THREE.Mesh(torus, ring); r.position.z = 0.02; g.add(r);
       app.scene.add(g);
       app.targetMeshes.push({ t, g });
     }

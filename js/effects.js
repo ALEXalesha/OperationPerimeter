@@ -178,7 +178,7 @@
     m.position.set(it.pos.x, it.pos.y + 0.05, it.pos.z);
   };
   P.setBomb = function (b) {
-    if (!b) { if (this.bombMesh) { this.group.remove(this.bombMesh); this.bombMesh = null; } return; }
+    if (!b) { if (this.bombMesh) this.bombMesh.visible = false; return; }
     if (!this.bombMesh) {
       const g = new THREE.Group();
       g.add(new THREE.Mesh(TAC.gunGeo('bomb'), TAC.bodyMaterial()));
@@ -187,6 +187,7 @@
       g.add(led);
       this.bombMesh = g; this.group.add(g);
     }
+    this.bombMesh.visible = true;
     this.bombMesh.position.set(b.pos.x, b.pos.y + 0.06, b.pos.z);
     this.bombMesh.getObjectByName('led').visible = b.led;
   };

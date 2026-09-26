@@ -124,6 +124,7 @@
   }
 
   // Строит всё, что видно на карте. Возвращает группу и управление качеством.
+  let skyGeo = null, letterGeo = null;
   TAC.buildMapMeshes = function (world, opts) {
     opts = opts || {};
     const hi = opts.textures !== 'low';
@@ -182,14 +183,14 @@
       const cc = world.siteCenter[L];
       if (!cc) continue;
       const p = world.center(cc[0], cc[1]);
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 4.5), new THREE.MeshBasicMaterial({ map: TAC.letterTexture(L), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+      const m = new THREE.Mesh(letterGeo || (letterGeo = new THREE.PlaneGeometry(4.5, 4.5)), new THREE.MeshBasicMaterial({ map: TAC.letterTexture(L), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
       m.rotation.x = -Math.PI / 2;
       m.position.set(p.x + 2, 0.02, p.z + 2);
       m.name = 'site-' + L;
       group.add(m);
     }
     // Небо - сфера вокруг камеры, рисуется первой
-    const sky = new THREE.Mesh(new THREE.SphereGeometry(80, 32, 16), new THREE.MeshBasicMaterial({ map: TAC.skyTexture(th.sky), side: THREE.BackSide, fog: false, depthWrite: false }));
+    const sky = new THREE.Mesh(skyGeo || (skyGeo = new THREE.SphereGeometry(80, 32, 16)), new THREE.MeshBasicMaterial({ map: TAC.skyTexture(th.sky), side: THREE.BackSide, fog: false, depthWrite: false }));
     sky.renderOrder = -10;
     sky.name = 'sky';
     group.add(sky);
@@ -217,7 +218,13 @@
         for (const m of floorMeshes) { m.userData.baked.lightMapIntensity = 1.05 * k; m.userData.live.lightMapIntensity = 0.55 * k; }
       },
       dispose() {
-        group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+        // общие геометрии (небо, буквы) и текстуры из кэша не трогаем - их берёт следующая карта
+        group.traverse((o) => {
+          if (o.geometry && o.geometry !== skyGeo && o.geometry !== letterGeo) o.geometry.dispose();
+          if (o.material) o.material.dispose();
+        });
+        for (const f of floorMeshes) { f.userData.baked.dispose(); f.userData.live.dispose(); }
+        if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
         lmSun.dispose(); lmAO.dispose();
       },
     };

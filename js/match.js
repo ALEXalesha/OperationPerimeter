@@ -551,6 +551,8 @@
     const dir = TAC.dirFromAngles(a.yaw, 0);
     const it = { weapon, def: weapon.def, bomb: false, pos: { x: a.pos.x + dir.x * 0.4, y: a.pos.y + 1.0, z: a.pos.z + dir.z * 0.4 }, vel: { x: dir.x * (thrown ? 4 : 1) + a.vel.x * 0.5, y: 1.5, z: dir.z * (thrown ? 4 : 1) + a.vel.z * 0.5 }, rot: this.rng() * 6.28, t: this.time, owner: a };
     this.drops.push(it);
+    // не копить лежащее оружие без конца: старое (не бомба) убирается
+    while (this.drops.length > 24) { const k = this.drops.findIndex((d) => !d.bomb); if (k < 0) break; this.removeDrop(k); }
     return it;
   };
   P.dropBomb = function (a, thrown) {

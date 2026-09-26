@@ -66,6 +66,7 @@
   TAC.mergeDefaults = function merge(def, saved) {
     if (saved == null || typeof saved !== typeof def || Array.isArray(def) !== Array.isArray(saved)) return JSON.parse(JSON.stringify(def));
     if (typeof def !== 'object' || def === null || Array.isArray(def)) return saved;
+    if (!Object.keys(def).length) return saved;         // словарь без заданных ключей (убийства по оружию, звёзды) - берётся как есть
     const out = {};
     for (const k of Object.keys(def)) out[k] = merge(def[k], saved[k]);
     return out;

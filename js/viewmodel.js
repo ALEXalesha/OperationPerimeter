@@ -17,6 +17,11 @@
     g.add(m);
     return m;
   }
+  // ствол - цилиндр вдоль Z
+  function barrel(g, r, len, x, y, z, mat) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 10), mat);
+    m.rotation.x = Math.PI / 2; m.position.set(x, y, z); g.add(m); return m;
+  }
   // Модель оружия: детали с пометкой skin получают материал облика
   function buildGun(model, skinMat) {
     const g = new THREE.Group();
@@ -31,14 +36,14 @@
         part(g, 0.04, 0.11, 0.055, 0, -0.07, 0.01, D, 0.25); part(g, 0.02, 0.02, 0.06, 0, 0.02, -0.25, M);
         break;
       case 'smg':
-        part(g, 0.06, 0.085, 0.3, 0, 0, -0.1, S); part(g, 0.028, 0.028, 0.12, 0, 0.01, -0.3, D);
+        part(g, 0.06, 0.085, 0.3, 0, 0, -0.1, S); barrel(g, 0.014, 0.12, 0, 0.01, -0.3, D);
         part(g, 0.04, 0.17, 0.05, 0, -0.12, -0.12, M); part(g, 0.035, 0.09, 0.045, 0, -0.07, 0.03, D, 0.3);
         part(g, 0.045, 0.05, 0.14, 0, -0.01, 0.1, S); part(g, 0.01, 0.025, 0.02, 0, 0.055, -0.2, D);
         break;
       case 'rifle': case 'rifle2':
         part(g, 0.064, 0.09, 0.34, 0, 0, -0.08, S);
         part(g, 0.058, 0.07, 0.22, 0, 0.005, -0.34, model === 'rifle' ? S : M);
-        part(g, 0.024, 0.024, 0.2, 0, 0.012, -0.54, D);
+        barrel(g, 0.012, 0.2, 0, 0.012, -0.54, D);
         part(g, 0.046, 0.16, 0.07, 0, -0.12, -0.1, model === 'rifle' ? D : S, model === 'rifle' ? 0.35 : 0.1);
         part(g, 0.038, 0.09, 0.05, 0, -0.08, 0.06, D, 0.3);
         part(g, 0.056, 0.08, 0.22, 0, -0.01, 0.2, S);
@@ -47,18 +52,18 @@
         break;
       case 'sniper': case 'awp':
         part(g, 0.066, 0.09, 0.4, 0, 0, -0.1, S);
-        part(g, 0.028, 0.028, model === 'awp' ? 0.5 : 0.38, 0, 0.012, model === 'awp' ? -0.53 : -0.47, D);
+        barrel(g, 0.014, model === 'awp' ? 0.5 : 0.38, 0, 0.012, model === 'awp' ? -0.53 : -0.47, D);
         part(g, 0.05, 0.05, 0.3, 0, 0.085, -0.1, D); part(g, 0.06, 0.06, 0.05, 0, 0.085, -0.26, M); part(g, 0.06, 0.06, 0.05, 0, 0.085, 0.06, M);
         part(g, 0.04, 0.12, 0.06, 0, -0.1, -0.06, D);
         part(g, 0.06, 0.1, 0.26, 0, -0.02, 0.22, S);
         break;
       case 'shotgun':
-        part(g, 0.06, 0.08, 0.3, 0, 0, -0.06, S); part(g, 0.03, 0.03, 0.46, 0, 0.02, -0.4, D);
+        part(g, 0.06, 0.08, 0.3, 0, 0, -0.06, S); barrel(g, 0.015, 0.46, 0, 0.02, -0.4, D);
         part(g, 0.05, 0.05, 0.16, 0, -0.035, -0.34, M); part(g, 0.038, 0.09, 0.05, 0, -0.07, 0.06, D, 0.3);
         part(g, 0.056, 0.08, 0.24, 0, -0.02, 0.2, S);
         break;
       case 'mg':
-        part(g, 0.08, 0.11, 0.42, 0, 0, -0.1, S); part(g, 0.03, 0.03, 0.34, 0, 0.012, -0.47, D);
+        part(g, 0.08, 0.11, 0.42, 0, 0, -0.1, S); barrel(g, 0.015, 0.34, 0, 0.012, -0.47, D);
         part(g, 0.1, 0.12, 0.12, 0.02, -0.11, -0.1, M); part(g, 0.04, 0.1, 0.05, 0, -0.08, 0.08, D, 0.3);
         part(g, 0.066, 0.09, 0.22, 0, -0.01, 0.24, S); part(g, 0.08, 0.02, 0.2, 0, 0.066, -0.14, D);
         break;
@@ -83,20 +88,33 @@
     return g;
   }
   // Руки: перчатки и рукава своей стороны
+  // Руки: объёмные рукава (цилиндры с манжетой), перчатки-эллипсоиды с костяшками
+  const armCache = {};
   function buildArms(model, team) {
-    const g = new THREE.Group(), sl = sleeveMats[team] || sleeveMats.T;
-    const pistol = model === 'pistol' || model === 'heavypistol';
-    const small = ['knife', 'frag', 'smoke', 'flash', 'fire', 'bomb'].includes(model);
-    // правая рука
-    part(g, 0.05, 0.05, 0.08, 0.005, -0.07, 0.04, gloveMat);
-    part(g, 0.065, 0.065, 0.3, 0.03, -0.1, 0.22, sl, 0.35);
-    if (!small) {
-      const z = pistol ? -0.02 : model === 'smg' ? -0.26 : -0.33;
-      part(g, 0.05, 0.045, 0.08, -0.02, -0.045, z, gloveMat);
-      part(g, 0.065, 0.065, 0.36, -0.13, -0.12, z + 0.2, sl, 0.25).rotation.y = -0.5;
+    const key = model + team;
+    if (!armCache[key]) {
+      const P = TAC.modelParts, arr = [];
+      const sleeve = team === 'CT' ? 0x2f3b4c : 0x6b5a44, cuff = team === 'CT' ? 0x222b36 : 0x4e4234, glove = 0x2a2723, knuckle = 0x3a3632;
+      const pistol = model === 'pistol' || model === 'heavypistol';
+      const small = ['knife', 'frag', 'smoke', 'flash', 'fire', 'bomb'].includes(model);
+      // правая рука держит рукоять
+      P.limb(arr, [0.05, -0.2, 0.42], [0.012, -0.08, 0.07], 0.05, 0.04, sleeve);
+      P.limb(arr, [0.012, -0.085, 0.085], [0.008, -0.07, 0.045], 0.043, 0.043, cuff);
+      P.ell(arr, 0.032, 0.045, 0.045, 0.004, -0.06, 0.02, glove);
+      P.box(arr, 0.05, 0.018, 0.03, -0.012, -0.035, 0.0, knuckle);
+      if (!small) {
+        const z = pistol ? -0.02 : model === 'smg' ? -0.25 : -0.32;
+        P.limb(arr, [-0.26, -0.24, z + 0.4], [-0.03, -0.06, z + 0.06], 0.05, 0.04, sleeve);
+        P.limb(arr, [-0.038, -0.066, z + 0.075], [-0.022, -0.052, z + 0.04], 0.043, 0.043, cuff);
+        P.ell(arr, 0.034, 0.03, 0.05, -0.012, -0.04, z, glove);
+        P.box(arr, 0.018, 0.028, 0.06, 0.02, -0.03, z - 0.005, knuckle);
+      }
+      armCache[key] = TAC.mergeParts(arr);
     }
-    return g;
+    return new THREE.Mesh(armCache[key], armMat || (armMat = new THREE.MeshLambertMaterial({ vertexColors: true })));
   }
+  let armMat = null;
+
 
   function ViewModel() {
     darkMat = darkMat || new THREE.MeshLambertMaterial({ color: DARK });
@@ -109,7 +127,7 @@
     this.scene.add(new THREE.HemisphereLight(0xfff4e0, 0x404040, 0.95));
     const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(0.5, 1, 0.6); this.scene.add(sun);
     this.root = new THREE.Group(); this.scene.add(this.root);
-    this.root.scale.setScalar(0.72);
+    this.root.scale.setScalar(0.55);
     this.holder = new THREE.Group(); this.root.add(this.holder);
     this.cache = new Map();
     this.key = null; this.model = null; this.skin = null; this.skinMat = null;
@@ -166,10 +184,10 @@
     this.throwT = Math.max(0, this.throwT - dt * 2.5);
     this.swayX *= Math.exp(-8 * dt); this.swayY *= Math.exp(-8 * dt);
     const o = this.offset;
-    let x = 0.165 + o.x + Math.sin(this.bobT) * 0.012 * amp + this.swayX;
-    let y = -0.165 + o.y - Math.abs(Math.cos(this.bobT)) * 0.012 * amp + this.swayY;
-    let z = -0.46 + o.z + this.kick * 0.035;
-    let rx = this.kick * 0.07, ry = 0, rz = 0;
+    let x = 0.235 + o.x + Math.sin(this.bobT) * 0.012 * amp + this.swayX;
+    let y = -0.205 + o.y - Math.abs(Math.cos(this.bobT)) * 0.012 * amp + this.swayY;
+    let z = -0.5 + o.z + this.kick * 0.035;
+    let rx = this.kick * 0.07 + 0.03, ry = -0.07, rz = 0;
     // доставание
     y -= this.draw * this.draw * 0.25; rx -= this.draw * 0.7;
     // перезарядка: оружие уходит вниз и наклоняется

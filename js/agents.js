@@ -108,29 +108,56 @@
   };
 
   // ---------- Модель ----------
+  // Бойцы собираются кодом из простых тел: эллипсоиды, конусы, цилиндры, коробки со скосом.
+  // Всё сливается в одну сетку с цветами вершин - одна отрисовка на часть тела.
   const PALETTE = {
-    T: { pants: 0x7d6e52, shirt: 0x6a5842, vest: 0x3b3830, pouch: 0x4d473b, skin: 0xc49a78, head: 0x262626, boots: 0x2b241d, accent: 0xb08a3e },
-    CT: { pants: 0x3a4454, shirt: 0x2d394a, vest: 0x1c2530, pouch: 0x2c3846, skin: 0xd0a888, head: 0x1f272d, boots: 0x16191d, accent: 0x5a8bd6 },
+    T: { pants: 0x7a6a4c, shirt: 0x6b5a44, vest: 0x3e3a2f, pouch: 0x544c3b, strap: 0x2e2a22, skin: 0xc49a78, mask: 0x2a2826, boots: 0x2b241d, pad: 0x3a3630, glove: 0x26231f, accent: 0xa8843c, lens: 0x303030 },
+    CT: { pants: 0x3b4658, shirt: 0x2f3b4c, vest: 0x222b36, pouch: 0x303c4b, strap: 0x1a2028, skin: 0xd0a888, mask: 0x1f252b, boots: 0x16191d, pad: 0x232a33, glove: 0x1c1f23, accent: 0x5a8bd6, lens: 0x6f9fc0 },
   };
   function boxInto(arr, w, h, d, x, y, z, color) { arr.push({ w, h, d, x, y, z, color: new THREE.Color(color) }); }
+  const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+  function place(g, x, y, z, rx, ry, rz, sx, sy, sz) {
+    _e.set(rx || 0, ry || 0, rz || 0); _q.setFromEuler(_e);
+    _m.compose(_v.set(x, y, z), _q, _s.set(sx || 1, sy || 1, sz || 1));
+    g.applyMatrix4(_m);
+    return g;
+  }
+  // тела: s - скруглённая «коробка» (эллипсоид), c - конус/цилиндр, b - коробка
+  function part(arr, geo, color) { arr.push({ geo, color: new THREE.Color(color) }); }
+  const ell = (arr, rx, ry, rz, x, y, z, color, seg) => part(arr, place(new THREE.SphereGeometry(1, seg || 12, (seg || 12) - 3), x, y, z, 0, 0, 0, rx, ry, rz), color);
+  const dome = (arr, r, x, y, z, color, sx, sz) => part(arr, place(new THREE.SphereGeometry(r, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), x, y, z, 0, 0, 0, sx || 1, 1, sz || 1), color);
+  const box = (arr, w, h, d, x, y, z, color, rx, ry, rz) => part(arr, place(new THREE.BoxGeometry(w, h, d), x, y, z, rx, ry, rz), color);
+  // «коробка» со скосами: конус на 4 грани, повёрнутый на 45°
+  const slab = (arr, wTop, wBot, h, depth, x, y, z, color) => part(arr, place(new THREE.CylinderGeometry(wTop * 0.7071, wBot * 0.7071, h, 4, 1), x, y, z, 0, Math.PI / 4, 0, 1, 1, depth), color);
+  // цилиндр между двумя точками (руки, ноги)
+  function limb(arr, a, b, r0, r1, color) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dy, dz);
+    const g = new THREE.CylinderGeometry(r1, r0, L, 9, 1);
+    _q.setFromUnitVectors(_up, _v.set(dx / L, dy / L, dz / L));
+    _m.compose(_s.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2), _q, new THREE.Vector3(1, 1, 1));
+    g.applyMatrix4(_m);
+    part(arr, g, color);
+  }
+  TAC.modelParts = { ell, dome, box, slab, limb };
   function merged(parts) {
     const geos = [];
     for (const p of parts) {
-      const g = new THREE.BoxGeometry(p.w, p.h, p.d);
-      g.translate(p.x, p.y, p.z);
+      let g = p.geo;
+      if (!g) { g = new THREE.BoxGeometry(p.w, p.h, p.d); g.translate(p.x, p.y, p.z); }
+      if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
       const n = g.attributes.position.count, col = new Float32Array(n * 3);
       for (let i = 0; i < n; i++) {
         const ny = g.attributes.normal.getY(i);
-        const shade = ny > 0.5 ? 1.08 : ny < -0.5 ? 0.6 : 0.9;
+        const shade = 0.8 + ny * 0.24;                       // верх светлее, низ темнее
         col[i * 3] = p.color.r * shade; col[i * 3 + 1] = p.color.g * shade; col[i * 3 + 2] = p.color.b * shade;
       }
       g.setAttribute('color', new THREE.BufferAttribute(col, 3));
       geos.push(g);
     }
-    // простое слияние без утилит three
     let total = 0, totalIdx = 0;
     for (const g of geos) { total += g.attributes.position.count; totalIdx += g.index.count; }
-    const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), col = new Float32Array(total * 3), idx = new Uint16Array(totalIdx);
+    const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), col = new Float32Array(total * 3);
+    const idx = total > 65535 ? new Uint32Array(totalIdx) : new Uint16Array(totalIdx);
     let o = 0, oi = 0;
     for (const g of geos) {
       pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); col.set(g.attributes.color.array, o * 3);
@@ -147,37 +174,58 @@
     out.computeBoundingSphere();
     return out;
   }
+  TAC.mergeParts = merged;
   const geoCache = {};
   let bodyMat = null, shadowMat = null, shadowGeo = null;
   function teamGeos(team) {
     if (geoCache[team]) return geoCache[team];
     const c = PALETTE[team] || PALETTE.T;
     const up = [];
-    // от бёдер (0) вверх
-    boxInto(up, 0.44, 0.6, 0.26, 0, 0.3, 0, c.shirt);
-    boxInto(up, 0.48, 0.42, 0.32, 0, 0.36, 0, c.vest);
-    boxInto(up, 0.14, 0.12, 0.06, -0.11, 0.26, 0.17, c.pouch);
-    boxInto(up, 0.14, 0.12, 0.06, 0.11, 0.26, 0.17, c.pouch);
-    boxInto(up, 0.46, 0.07, 0.3, 0, 0.02, 0, c.boots);
-    boxInto(up, 0.12, 0.08, 0.12, 0, 0.64, 0, c.skin);                 // шея
+    // всё от бёдер (0) вверх, лицо смотрит на -Z
+    slab(up, 0.4, 0.36, 0.14, 0.62, 0, 0.04, 0, c.pants);                      // таз
+    box(up, 0.42, 0.06, 0.25, 0, 0.1, 0, c.strap);                             // ремень
+    box(up, 0.06, 0.05, 0.02, 0, 0.1, -0.128, c.accent);                      // пряжка
+    slab(up, 0.46, 0.36, 0.5, 0.58, 0, 0.36, 0, c.shirt);                      // корпус: шире в плечах
+    slab(up, 0.44, 0.4, 0.36, 0.72, 0, 0.36, 0, c.vest);                       // бронежилет
+    for (const x of [-0.12, 0, 0.12]) box(up, 0.1, 0.13, 0.05, x, 0.26, -0.165, c.pouch);   // подсумки
+    box(up, 0.1, 0.1, 0.05, 0.13, 0.42, -0.158, c.pouch);                     // рация
+    box(up, 0.06, 0.2, 0.04, -0.13, 0.46, -0.155, c.strap);                   // лямка
+    box(up, 0.28, 0.2, 0.06, 0, 0.36, 0.17, c.pouch);                         // рюкзак-гидратор сзади
+    for (const x of [-0.17, 0.17]) box(up, 0.07, 0.03, 0.3, x, 0.55, 0, c.strap);           // лямки на плечах
+    limb(up, [0, 0.54, 0], [0, 0.66, 0], 0.06, 0.055, c.skin);                // шея
+    // голова: эллипсоид
+    ell(up, 0.115, 0.135, 0.125, 0, 0.78, 0, c.skin, 14);
     if (team === 'CT') {
-      boxInto(up, 0.24, 0.24, 0.25, 0, 0.8, 0, c.skin);
-      boxInto(up, 0.29, 0.14, 0.3, 0, 0.92, 0, c.head);                 // шлем
-      boxInto(up, 0.22, 0.06, 0.04, 0, 0.83, -0.13, 0x9fc0d8);          // очки
-      boxInto(up, 0.08, 0.1, 0.05, 0.16, 0.88, 0, c.accent);
+      ell(up, 0.12, 0.07, 0.13, 0, 0.73, 0.004, c.mask, 12);                 // маска на нижней половине лица
+      dome(up, 0.145, 0, 0.8, 0, 0x2b3440, 1, 1.08);                         // шлем
+      box(up, 0.3, 0.025, 0.3, 0, 0.8, 0, 0x242c36);                          // край шлема
+      box(up, 0.2, 0.055, 0.05, 0, 0.8, -0.12, c.lens);                       // очки
+      box(up, 0.26, 0.025, 0.24, 0, 0.8, 0.01, c.strap);                      // ремешок очков
+      box(up, 0.05, 0.08, 0.05, 0.15, 0.84, 0.01, c.accent);                  // фонарь на шлеме
     } else {
-      boxInto(up, 0.24, 0.26, 0.25, 0, 0.8, 0, c.head);                 // балаклава
-      boxInto(up, 0.2, 0.05, 0.02, 0, 0.83, -0.125, c.skin);            // прорезь для глаз
-      boxInto(up, 0.26, 0.05, 0.27, 0, 0.94, 0, c.accent);
+      ell(up, 0.123, 0.142, 0.132, 0, 0.785, 0.002, c.mask, 14);              // балаклава
+      box(up, 0.16, 0.034, 0.03, 0, 0.8, -0.12, c.skin);                      // прорезь для глаз
+      box(up, 0.12, 0.018, 0.02, 0, 0.8, -0.133, 0x1a1a1a);                    // глаза
+      limb(up, [0, 0.6, 0], [0, 0.68, 0], 0.085, 0.08, c.accent);             // платок на шее
     }
-    // руки вперёд к оружию
-    boxInto(up, 0.1, 0.1, 0.36, 0.22, 0.42, -0.2, c.shirt);
-    boxInto(up, 0.1, 0.1, 0.34, -0.14, 0.4, -0.28, c.shirt);
-    boxInto(up, 0.09, 0.09, 0.09, 0.2, 0.4, -0.4, c.head);
-    boxInto(up, 0.09, 0.09, 0.09, -0.04, 0.38, -0.46, c.head);
+    // плечи и руки к оружию: правая держит рукоять, левая - цевьё
+    ell(up, 0.075, 0.07, 0.08, 0.23, 0.52, 0, c.shirt);
+    ell(up, 0.075, 0.07, 0.08, -0.23, 0.52, 0, c.shirt);
+    limb(up, [0.24, 0.5, 0], [0.25, 0.32, -0.1], 0.058, 0.052, c.shirt);
+    limb(up, [0.25, 0.32, -0.1], [0.13, 0.4, -0.3], 0.05, 0.045, c.shirt);
+    ell(up, 0.045, 0.05, 0.055, 0.12, 0.4, -0.32, c.glove);
+    limb(up, [-0.24, 0.5, 0], [-0.2, 0.33, -0.18], 0.058, 0.052, c.shirt);
+    limb(up, [-0.2, 0.33, -0.18], [-0.02, 0.4, -0.46], 0.05, 0.045, c.shirt);
+    ell(up, 0.045, 0.05, 0.055, -0.01, 0.4, -0.48, c.glove);
+    // нога от бедра вниз: бедро, наколенник, голень, ботинок
     const leg = [];
-    boxInto(leg, 0.17, 0.66, 0.2, 0, -0.33, 0, c.pants);
-    boxInto(leg, 0.18, 0.2, 0.26, 0, -0.76, -0.03, c.boots);
+    limb(leg, [0, 0, 0], [0, -0.43, -0.01], 0.105, 0.085, c.pants);
+    ell(leg, 0.08, 0.075, 0.08, 0, -0.44, -0.01, c.pants);
+    box(leg, 0.12, 0.11, 0.05, 0, -0.44, -0.085, c.pad, 0.1);                  // наколенник
+    limb(leg, [0, -0.44, -0.01], [0, -0.8, 0], 0.08, 0.065, c.pants);
+    box(leg, 0.03, 0.09, 0.12, 0.1, -0.2, 0, c.pouch);                       // карман на бедре
+    slab(leg, 0.14, 0.15, 0.12, 1.7, 0, -0.83, -0.035, c.boots);              // ботинок
+    box(leg, 0.13, 0.025, 0.27, 0, -0.9, -0.04, 0x141210);                    // подошва
     geoCache[team] = { upper: merged(up), leg: merged(leg) };
     return geoCache[team];
   }

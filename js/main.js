@@ -217,7 +217,8 @@
     lockPointer();
   };
   function lockPointer() {
-    if (app.manual) return;
+    // под автоматикой (проверки, пробы) мышь не захватываем: чужие окна не должны ловить курсор владельца
+    if (app.manual || navigator.webdriver) return;
     const c = app.renderer.domElement;
     try {
       const p = c.requestPointerLock(TAC.settings.input.rawInput ? { unadjustedMovement: true } : undefined);

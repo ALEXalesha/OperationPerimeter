@@ -258,6 +258,21 @@
     if (app.mode === 'game' && app.match && !app.match.over && !inElectron) { e.preventDefault(); e.returnValue = ''; }
   });
   addEventListener('pagehide', () => { focusLost('Игра остановлена.'); if (TAC.audio) TAC.audio.suspend(); });
+  // Оболочки ОС (игра в iframe внутри симуляторов Windows и macOS) шлют {mix:'pause'} и {mix:'resume'}.
+  // pause - как скрытая вкладка: пауза в бою, звук заглушён, ввод сброшен, мышь отпущена.
+  // resume - пауза в бою остаётся (продолжает сам игрок), в меню звук возвращается.
+  addEventListener('message', (e) => {
+    const cmd = e.data && typeof e.data === 'object' ? e.data.mix : null;
+    if (cmd === 'pause') {
+      for (const k in app.act) app.act[k] = false;
+      app.mouseL = false;
+      if (app.mode === 'game' && !app.paused) app.pause('Игра остановлена: окно свёрнуто или неактивно.');
+      if (document.pointerLockElement) { app.expectUnlock = true; document.exitPointerLock(); }
+      if (TAC.audio) TAC.audio.suspend();
+    } else if (cmd === 'resume') {
+      if (app.mode !== 'game' && TAC.audio) TAC.audio.resume();
+    }
+  });
 
   // ---------- Ввод ----------
   function actionOf(code) {

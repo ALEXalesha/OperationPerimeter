@@ -51,8 +51,17 @@
     return { master: A.muted ? 0 : L.master, effects: L.effects, steps: L.steps * (L.eq === 'crisp' ? 1.5 : 1), stepBoostDb: L.eq === 'crisp' ? 9 : 0, music: L.music * 0.5 };
   };
   A.setMuted = function (m) { A.muted = !!m; A.apply(); };
-  A.suspend = function () { if (A.ctx && A.ctx.state === 'running') { A.ctx.suspend(); } A.suspendedByPause = true; };
-  A.resume = function () { A.suspendedByPause = false; if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume(); };
+  // suspend и resume асинхронны: resume ждёт незаконченный suspend, иначе быстрое «скрыть-показать» оставляло звук выключенным
+  A.pending = null;
+  A.suspend = function () {
+    A.suspendedByPause = true;
+    if (A.ctx && A.ctx.state !== 'closed') A.pending = A.ctx.suspend().catch(() => {});
+  };
+  A.resume = function () {
+    A.suspendedByPause = false;
+    if (!A.ctx || A.ctx.state === 'closed') return;
+    (A.pending || Promise.resolve()).then(() => { if (!A.suspendedByPause && A.ctx.state !== 'running') return A.ctx.resume(); }).catch(() => {});
+  };
 
   A.setListener = function (pos, yaw) {
     A.listener.x = pos.x; A.listener.y = pos.y; A.listener.z = pos.z;

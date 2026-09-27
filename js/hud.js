@@ -231,9 +231,13 @@
     setText('timer', $('timer'), timer);
     if (hud.cache.tcls !== cls) { hud.cache.tcls = cls; $('timer').className = 'timer ' + cls; }
     let l = '', r = '', al = '', ar = '';
-    if (m.mode === 'comp' || m.mode === 'tdm') {
+    if (m.mode === 'tdm') {
+      l = String(m.teamKills[0]); r = String(m.teamKills[1]);
+      for (const a of m.agents) { const i = `<i class="${a.alive ? '' : 'dead'}"></i>`; if (a.squad === 0) al += i; else ar += i; }
+      $('scL').className = 'sc n'; $('scR').className = 'sc n';
+    } else if (m.mode === 'comp') {
       const ctSq = m.squadOfSide('CT'), tSq = 1 - ctSq;
-      const src = m.mode === 'comp' ? m.score : m.teamKills;
+      const src = m.score;
       l = String(src[ctSq]); r = String(src[tSq]);
       for (const a of m.agents) {
         const i = `<i class="${a.alive ? '' : 'dead'}"></i>`;
@@ -241,9 +245,11 @@
       }
       $('scL').className = 'sc ct'; $('scR').className = 'sc t';
     } else if (m.mode === 'dm') {
+      $('scL').className = 'sc n'; $('scR').className = 'sc n';
       const order = m.agents.slice().sort((a, b) => b.stats.k - a.stats.k);
       l = String(m.player.stats.k); r = String(order[0] === m.player ? (order[1] ? order[1].stats.k : 0) : order[0].stats.k);
     } else if (m.mode === 'train') {
+      $('scL').className = 'sc n'; $('scR').className = 'sc n';
       l = String(m.trainHits); r = String(m.best || 0);
     }
     setText('scL', $('scL'), l); setText('scR', $('scR'), r);
@@ -326,11 +332,13 @@
     if (!cam || !me || !me.team) { setHTML('tags', box, ''); return; }
     const v = hud._v || (hud._v = new THREE.Vector3());
     let html = '';
+    const cm = $('centermsg'), msgBox = cm.textContent ? cm.getBoundingClientRect() : null;
     for (const a of m.agents) {
       if (a === me || !a.alive || a.team !== me.team) continue;
       v.set(a.pos.x, a.pos.y + a.height() + 0.25, a.pos.z).project(cam);
       if (v.z > 1 || v.z < -1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) continue;
       const x = (v.x * 0.5 + 0.5) * innerWidth, y = (-v.y * 0.5 + 0.5) * innerHeight;
+      if (msgBox && x > msgBox.left - 60 && x < msgBox.right + 60 && y > msgBox.top - 10 && y < msgBox.bottom + 24) continue;
       html += `<span style="left:${x.toFixed(0)}px;top:${y.toFixed(0)}px;color:${TAC.settings.game.teamColors && a.color ? a.color : '#9fc3ff'}">${esc(a.name)}</span>`;
     }
     setHTML('tags', box, html);
@@ -339,6 +347,7 @@
   // ---------- Меню покупки ----------
   hud.showBuy = function (on) {
     hud.buyOpen = !!on;
+    document.body.classList.toggle('buying', hud.buyOpen);
     $('buymenu').classList.toggle('show', hud.buyOpen);
     if (on) { hud.cache.buyKey = null; hud.renderBuyCats(); }
   };
@@ -398,15 +407,21 @@
   // ---------- Таблица счёта ----------
   hud.showScoreboard = function (on) { hud.sbOpen = !!on; $('scoreboard').classList.toggle('show', hud.sbOpen); hud.cache.sb = null; };
   hud.renderScoreboard = function (m, target) {
-    const rows = (list, showMoney) => list.map((a) => `<tr class="${a === m.player ? 'me' : ''}${a.alive ? '' : ' dead'}"><td>${a.color && TAC.settings.game.teamColors ? `<span class="dot" style="background:${a.color}"></span>` : ''}${esc(a.name)}</td><td>${showMoney ? TAC.fmtMoney(a.money) : ''}</td><td>${a.stats.k}</td><td>${a.stats.a}</td><td>${a.stats.d}</td><td>${a.stats.mvp ? '★' + a.stats.mvp : ''}</td><td>${a.stats.score}</td><td>${a.isBot ? 'БОТ' : '5'}</td></tr>`).join('');
-    const head = '<tr><th>Игрок</th><th>Деньги</th><th>У</th><th>П</th><th>С</th><th>MVP</th><th>Очки</th><th>Пинг</th></tr>';
+    // деньги, MVP и стороны атака/защита есть только в соревновательном
+    const comp = m.mode === 'comp';
+    const rows = (list, showMoney) => list.map((a) => `<tr class="${a === m.player ? 'me' : ''}${a.alive ? '' : ' dead'}"><td>${a.color && TAC.settings.game.teamColors ? `<span class="dot" style="background:${a.color}"></span>` : ''}${esc(a.name)}</td>${comp ? `<td>${showMoney ? TAC.fmtMoney(a.money) : ''}</td>` : ''}<td>${a.stats.k}</td><td>${a.stats.a}</td><td>${a.stats.d}</td>${comp ? `<td>${a.stats.mvp ? '★' + a.stats.mvp : ''}</td>` : ''}<td>${a.stats.score}</td><td>${a.isBot ? 'БОТ' : '5'}</td></tr>`).join('');
+    const head = `<tr><th>Игрок</th>${comp ? '<th>Деньги</th>' : ''}<th>У</th><th>П</th><th>С</th>${comp ? '<th>MVP</th>' : ''}<th>Очки</th><th>Пинг</th></tr>`;
     const sort = (l) => l.slice().sort((a, b) => b.stats.score - a.stats.score || b.stats.k - a.stats.k);
     let html = '';
-    if (m.mode === 'comp' || m.mode === 'tdm') {
+    if (comp) {
       for (const side of ['CT', 'T']) {
         const sq = m.squadOfSide(side);
-        const sc = m.mode === 'comp' ? m.score[sq] : m.teamKills[sq];
-        html += `<div class="sbteam ${side}"><h3><span>${TAC.TEAM_NAMES[side]} · ${TAC.SIDE_NAMES[side]}</span><span>${sc}</span></h3><table>${head}${rows(sort(m.agents.filter((a) => a.team === side)), side === m.player.team && m.mode === 'comp')}</table></div>`;
+        html += `<div class="sbteam ${side}"><h3><span>${TAC.TEAM_NAMES[side]} · ${TAC.SIDE_NAMES[side]}</span><span>${m.score[sq]}</span></h3><table>${head}${rows(sort(m.agents.filter((a) => a.team === side)), side === m.player.team)}</table></div>`;
+      }
+    } else if (m.mode === 'tdm') {
+      for (const sq of [0, 1]) {
+        const side = m.sideOf(sq);
+        html += `<div class="sbteam N"><h3><span>${sq === 0 ? 'Ваша команда' : 'Противник'} · ${TAC.TEAM_NAMES[side]}</span><span>${m.teamKills[sq]} / ${m.killLimit}</span></h3><table>${head}${rows(sort(m.agents.filter((a) => a.squad === sq)), false)}</table></div>`;
       }
     } else {
       html = `<div class="sbteam N"><h3><span>${m.mode === 'dm' ? 'Бой насмерть' : 'Разминка'}</span><span>до ${m.killLimit || '-'}</span></h3><table>${head}${rows(m.agents.slice().sort((a, b) => b.stats.k - a.stats.k || a.stats.d - b.stats.d), false)}</table></div>`;

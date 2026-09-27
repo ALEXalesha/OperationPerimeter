@@ -504,9 +504,9 @@
       for (const a of m.agents) {
         if (a === b || !a.alive) continue;
         const ox = b.pos.x - a.pos.x, oz = b.pos.z - a.pos.z, d = Math.hypot(ox, oz);
-        if (d < 0.9 && d > 1e-3) { const side = (ox * -dz + oz * dx) >= 0 ? 1 : -1; dx += -dz * side * 0.35; dz += dx * side * 0.35; }
+        if (d < 0.9 && d > 1e-3) { const side = (ox * -dz + oz * dx) >= 0 ? 1 : -1; const px = -dz, pz = dx; dx += px * side * 0.35; dz += pz * side * 0.35; }
       }
-    } else { dx += -dz * this.nudge * 0.5; dz += dx * this.nudge * 0.5; }
+    } else { const px = -dz, pz = dx; dx += px * this.nudge * 0.5; dz += pz * this.nudge * 0.5; }
     const want = Math.atan2(-dx, -dz);
     const rel = TAC.wrapAngle(want - b.yaw);
     inp.mz = Math.cos(rel); inp.mx = -Math.sin(rel);

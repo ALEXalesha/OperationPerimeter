@@ -33,7 +33,7 @@
       setTimeout(() => toast('Браузер не даёт закрыть вкладку сам - закройте её, прогресс сохранён'), 200);
     }));
     click($('btnResume'), () => TAC.app.resume());
-    click($('btnQuit'), () => M.confirm('Выйти в меню?', 'Текущий матч будет прерван.', () => TAC.app.quitToMenu(true)));
+    click($('btnQuit'), () => M.confirm('Выйти в меню?', TAC.app.match && TAC.app.match.mode === 'comp' ? 'Матч будет прерван и засчитан как поражение.' : 'Текущий матч будет прерван.', () => TAC.app.quitToMenu(true)));
     click($('btnPauseSettings'), () => { $('pauseSettingsHost').appendChild($('settings')); $('pauseSettingsHost').classList.add('show'); M.renderSettings(); });
     click($('btnPauseBack'), () => $('pauseSettingsHost').classList.remove('show'));
     click($('btnAgain'), () => { $('matchover').classList.remove('show'); const o = Object.assign({}, TAC.app.opts, { seed: (Math.random() * 1e9) >>> 0 }); TAC.app.startMatch(o); });
@@ -45,7 +45,12 @@
     click($('caseEquip'), () => { if (M.lastCaseItem) { TAC.inventory.equip(M.lastCaseItem.weapon, M.lastCaseItem.uid); M.invWeapon = M.lastCaseItem.weapon; } $('caseopen').classList.remove('show'); M.invSub('loadout'); });
     for (const b of document.querySelectorAll('.invsub .sub')) click(b, () => M.invSub(b.dataset.inv));
     for (const b of document.querySelectorAll('.settabs button')) click(b, () => { M.setTab = b.dataset.set; M.renderSettings(); });
-    for (const b of document.querySelectorAll('button')) b.addEventListener('mouseenter', () => TAC.audio && TAC.audio.ctx && TAC.audio.play('hover'));
+    document.addEventListener('mouseover', (e) => {
+      const b = e.target.closest && e.target.closest('button');
+      if (b === M.hoverBtn) return;
+      M.hoverBtn = b;
+      if (b && !b.disabled && TAC.audio && TAC.audio.ctx) TAC.audio.play('hover');
+    });
     M.buildModeCards();
     M.refresh();
     M.openTab('home');
@@ -194,7 +199,8 @@
       const el = document.createElement('div');
       el.className = 'mission' + (open ? '' : ' locked') + (m.final ? ' final' : '');
       el.dataset.mission = m.id;
-      el.innerHTML = `<div class="mn">${m.final ? 'Финал' : 'Миссия ' + (i + 1)} · ${TAC.MODES[m.mode].name} · ${TAC.MAPS[m.map].name} · ${TAC.DIFFICULTY[m.diff].name.toLowerCase()}</div><h3>${m.name}</h3><p>${m.text}</p><div class="stars"><b>${'★'.repeat(st)}</b>${'★'.repeat(3 - st)}</div><div class="starlist">${m.stars.map((s, k) => (k < st ? '✓ ' : '· ') + s).join('<br>')}</div>`;
+      const tags = [m.final ? 'Финал' : 'Миссия ' + (i + 1), TAC.MODES[m.mode].name, TAC.MAPS[m.map].name, TAC.DIFFICULTY[m.diff].name.toLowerCase()];
+      el.innerHTML = `<div class="mn">${tags.map((t) => `<span>${t}</span>`).join('')}</div><h3>${m.name}${open ? '' : ' <small>закрыто</small>'}</h3><p>${m.text}</p><div class="stars"><b>${'★'.repeat(st)}</b>${'★'.repeat(3 - st)}</div><ul class="starlist">${m.stars.map((s, k) => `<li class="${k < st ? 'got' : ''}">${s}</li>`).join('')}</ul>`;
       const b = document.createElement('button');
       b.className = 'btn' + (open ? ' primary' : '');
       b.textContent = open ? (st ? 'Переиграть' : 'Начать') : 'Закрыто';
@@ -342,7 +348,7 @@
       click(b, () => { inv.equip(wid, it.uid); M.renderInventory(); });
       sl.appendChild(b);
     }
-    if (opts.length === 1) { const p = document.createElement('div'); p.className = 'dim'; p.style.cssText = 'grid-column:1/-1;padding:6px'; p.textContent = 'Других обликов для этого оружия пока нет. Откройте кейс во вкладке «Кейсы»: жетоны дают за матчи.'; sl.appendChild(p); }
+    if (opts.length === 1) { const p = document.createElement('div'); p.className = 'invhint'; p.textContent = 'Других обликов для этого оружия пока нет. Откройте кейс во вкладке «Кейсы»: жетоны дают за матчи.'; sl.appendChild(p); }
     // кейсы
     const cl = $('caseList');
     cl.innerHTML = '';

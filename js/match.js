@@ -33,7 +33,7 @@
     this.short = opts.short != null ? !!opts.short : true;
     this.maxRounds = this.short ? 15 : 24; this.winRounds = this.short ? 8 : 13; this.half = this.short ? 7 : 12;
     this.freezeTime = opts.freeze != null ? opts.freeze : E.freezeTime;
-    this.score = [0, 0]; this.lossStreak = [0, 0]; this.round = 0;
+    this.score = [0, 0]; this.lossStreak = [E.lossStart, E.lossStart]; this.round = 0;
     this.phase = 'init'; this.phaseEnd = 0; this.roundStart = 0; this.liveStart = 0;
     this.bomb = null;
     this.spotted = [new Map(), new Map()];
@@ -215,7 +215,7 @@
       a.money = E.start; a.survived = false;
       a.inv.primary = null; a.inv.grenades = []; a.armor = 0; a.helmet = false; a.kit = false;
     }
-    this.lossStreak = [0, 0];
+    this.lossStreak = [E.lossStart, E.lossStart];
     this.event({ type: 'halftime' });
   };
 
@@ -656,7 +656,6 @@
   // ---------- Урон и убийства ----------
   P.applyDamage = function (attacker, victim, hp, ar, def, zone, point) {
     if (!victim.alive || victim.spawnProtect > 0) return;
-    if (this.phase === 'roundEnd' && this.mode === 'comp' && false) return;
     const before = victim.hp;
     victim.hp -= hp;
     victim.armor = Math.max(0, victim.armor - ar);

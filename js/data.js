@@ -81,7 +81,7 @@
   TAC.ECON = {
     start: 800, max: 16000,
     win: { elimination: 3250, bomb: 3500, defuse: 3500, time: 3250 },
-    lossBase: 1400, lossStep: 500, lossMax: 3400,
+    lossBase: 1400, lossStep: 500, lossMax: 3400, lossStart: 1,   // как в соревновательных тактических шутерах: в начале каждой половины счётчик поражений = 1
     plantTeamBonus: 800, plantPlayer: 300, defusePlayer: 300,
     killByCat: { knife: 1500, pistol: 300, smg: 600, rifle: 300, sniper: 300, heavy: 300, grenade: 300 },
     buyTime: 20, freezeTime: 10, roundTime: 115, roundEndDelay: 5,

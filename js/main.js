@@ -170,7 +170,14 @@
 
   app.quitToMenu = function (abandon) {
     const m = app.match;
-    if (m && abandon && !m.over && m.player) TAC.stats.record(m.summary(), true);
+    if (m && abandon && !m.over && m.player) {
+      const s = m.summary();
+      if (m.mode === 'comp') {                       // брошенный соревновательный матч - поражение, как в оригинале
+        s.won = false; s.draw = false;
+        TAC.stats.record(s, false);
+        TAC.profile.applyMatch(s);
+      } else TAC.stats.record(s, true);
+    }
     hideGameOverlays();
     if (app.disposeTargets) { app.disposeTargets(); app.disposeTargets = null; }
     disposeGame();
@@ -478,7 +485,7 @@
       const m = app.createMatch(opts);
       return { mode: m.mode, map: m.mapId, side: m.player.team };
     },
-    step(n) { const m = app.match; for (let i = 0; i < (n || 1); i++) { if (!m.over || true) m.step(); } return m.time; },
+    step(n) { const m = app.match; for (let i = 0; i < (n || 1); i++) m.step(); return m.time; },
     stepPlayer(n) { const m = app.match; for (let i = 0; i < (n || 1); i++) { applyInput(); m.step(); } return m.time; },
     get match() { return app.match; },
     get player() { return app.match && app.match.player; },

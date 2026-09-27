@@ -607,7 +607,7 @@
     click(ra, () => { TAC.resetSettings('input'); M.bindMsg = ''; M.conflictAction = null; changed(); M.renderInputSettings(); });
     f.appendChild(rb); f.appendChild(ra); i.appendChild(f);
     const note = document.createElement('p'); note.className = 'dim'; note.style.fontSize = '12px';
-    note.textContent = 'В браузере Ctrl+W закрывает вкладку, поэтому присесть по умолчанию - C. Esc всегда открывает паузу.';
+    note.textContent = 'Присесть - Ctrl, как в оригинале. В обычном браузере Ctrl+W закрывает вкладку: во время матча страница спросит, точно ли уйти. В «Игротеке» такого нет. Esc всегда открывает паузу.';
     i.appendChild(note);
   };
   M.startBind = function (action) {

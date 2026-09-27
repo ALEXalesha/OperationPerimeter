@@ -250,6 +250,12 @@
     if (app.mode === 'game' && !app.paused && !app.manual) app.pause(why);
   };
   addEventListener('blur', () => focusLost('Игра остановлена: окно потеряло фокус.'));
+  // В обычном браузере Ctrl+W (присесть + вперёд) закрывает вкладку и это не отменить - во время матча спрашиваем.
+  // В «Игротеке» (Electron) такого сочетания нет, вопрос не нужен.
+  const inElectron = /Electron/i.test(navigator.userAgent);
+  addEventListener('beforeunload', (e) => {
+    if (app.mode === 'game' && app.match && !app.match.over && !inElectron) { e.preventDefault(); e.returnValue = ''; }
+  });
   addEventListener('pagehide', () => { focusLost('Игра остановлена.'); if (TAC.audio) TAC.audio.suspend(); });
 
   // ---------- Ввод ----------
@@ -271,7 +277,9 @@
     }
     if (app.paused || !m) return;
     const act = actionOf(e.code);
-    if (e.code === 'Tab' || act) e.preventDefault();
+    // зажатый Ctrl (присесть) не должен запускать сочетания браузера: Ctrl+D, Ctrl+S, Ctrl+цифра...
+    // Ctrl+W и Ctrl+T браузер не отдаёт - для них ниже вопрос перед уходом со страницы
+    if (e.code === 'Tab' || act || e.ctrlKey || e.metaKey) e.preventDefault();
     if (TAC.hud.buyOpen && /^Digit[0-9]$/.test(e.code)) { TAC.hud.buyKey(m, Number(e.code.slice(5))); return; }
     if (!act) return;
     if (e.repeat && act !== 'forward') return;

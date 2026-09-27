@@ -261,7 +261,7 @@
     let msg = '';
     if (m.mode === 'comp' && m.phase === 'freeze') msg = `Раунд ${m.round} начнётся через ${Math.ceil(m.phaseEnd - m.time)}<small>B - купить оружие · ${m.round === 1 || m.round === m.half + 1 ? 'пистолетный раунд' : TAC.SIDE_NAMES[p.team] + ': ' + (p.team === 'T' ? 'заложите бомбу на A или B' : 'не дайте заложить бомбу')}</small>`;
     else if (m.mode === 'comp' && p.alive && p.inv.bomb && m.phase === 'live' && m.time - m.liveStart < 6) msg = '<small>У вас бомба: 5 - взять, в зоне A или B держите ЛКМ</small>';
-    else if (m.mode === 'train' && m.phase === 'live' && m.time - m.liveStart < 4) msg = 'Разминка: 60 секунд<small>Сбивайте мишени и неподвижных ботов. B - любое оружие бесплатно</small>';
+    else if (m.mode === 'train' && m.phase === 'live' && m.time - m.liveStart < 4) msg = 'Разминка: 60 секунд<small>Сбивайте мишени и неподвижных ботов. B - любое оружие бесплатно, Ctrl - присесть</small>';
     setHTML('cmsg', $('centermsg'), msg);
   };
   hud.message = function (html, ms) {

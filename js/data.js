@@ -300,7 +300,7 @@
     crosshair: { style: 'static', size: 3, thickness: 1, gap: 1, dot: false, outline: true, outlineThickness: 1, color: 'green', r: 80, g: 250, b: 80, alpha: 230, tStyle: false, followRecoil: false },
     video: { preset: 'high', renderScale: 1, brightness: 1, shadows: 'off', textures: 'high', aa: 'on', particles: 'high', distance: 160, showFps: false },
     audio: { master: 0.7, effects: 0.8, steps: 0.8, music: 0.35, eq: 'natural' },
-    input: { sens: 1.6, zoomSens: 1, rawInput: true, accel: false, invertY: false, keys },
+    input: { sens: 1.6, zoomSens: 1, rawInput: true, accel: false, invertY: false, keys, keysV: 2 },
   };
   // Пределы и допустимые значения настроек (как у ползунков и переключателей в меню)
   TAC.SETTING_RANGES = {

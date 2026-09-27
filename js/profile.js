@@ -15,7 +15,16 @@
     for (const k of Object.keys(s.input.keys)) if (typeof s.input.keys[k] !== 'string') s.input.keys[k] = D.input.keys[k];
     return s;
   };
-  TAC.settings = TAC.cleanSettings(TAC.mergeDefaults(TAC.DEFAULT_SETTINGS, S.get('settings', null)));
+  // Раскладка v2: «Присесть» переехало с C на Ctrl. Старое сохранение с C получает Ctrl один раз,
+  // если Ctrl не занят другим действием; после этого C - уже сознательный выбор игрока.
+  TAC.migrateKeys = function (raw) {
+    const inp = raw && raw.input, k = inp && inp.keys;
+    if (!k || typeof k !== 'object' || inp.keysV === 2) return raw;
+    if (k.crouch === 'KeyC' && !Object.values(k).includes('ControlLeft')) k.crouch = 'ControlLeft';
+    inp.keysV = 2;
+    return raw;
+  };
+  TAC.settings = TAC.cleanSettings(TAC.mergeDefaults(TAC.DEFAULT_SETTINGS, TAC.migrateKeys(S.get('settings', null))));
   { const rb = S.get('rangeBest', 0); if (typeof rb !== 'number' || !isFinite(rb) || rb < 0) S.set('rangeBest', 0); }
   // клавиши: новые действия получают свои умолчания
   TAC.saveSettings = function () { S.set('settings', TAC.settings); };

@@ -60,7 +60,14 @@
   A.resume = function () {
     A.suspendedByPause = false;
     if (!A.ctx || A.ctx.state === 'closed') return;
-    (A.pending || Promise.resolve()).then(() => { if (!A.suspendedByPause && A.ctx.state !== 'running') return A.ctx.resume(); }).catch(() => {});
+    // браузер под нагрузкой может не проснуться с первого раза - повторяем, пока не заработает или снова не скрыли
+    let tries = 0;
+    const kick = () => {
+      if (A.suspendedByPause || !A.ctx || A.ctx.state === 'running' || A.ctx.state === 'closed' || tries++ > 20) return;
+      A.ctx.resume().catch(() => {});
+      setTimeout(kick, 250);
+    };
+    (A.pending || Promise.resolve()).then(kick);
   };
 
   A.setListener = function (pos, yaw) {

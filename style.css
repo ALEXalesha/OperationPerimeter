@@ -112,7 +112,7 @@ body.ingame #shade { opacity: 0; }
 .mission.final { border-color: rgba(232, 176, 74, 0.6); background: linear-gradient(160deg, rgba(232, 176, 74, 0.14), var(--panel)); }
 .mission .mn { font-size: 11px; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; display: flex; flex-wrap: wrap; }
 .mission .mn span { white-space: nowrap; }
-.mission .mn span + span::before { content: '·'; margin: 0 6px; }
+.mission .mn span:not(:last-child)::after { content: '·'; margin: 0 6px; }
 .mission h3 { margin: 0; font-size: 17px; }
 .mission p { margin: 0; color: #c3cbd4; font-size: 12.5px; line-height: 1.4; flex: 1; }
 .mission .stars { color: #4a525c; font-size: 18px; letter-spacing: 2px; }
@@ -350,7 +350,7 @@ body.buying #hud .radarbox, body.buying #hud .killfeed, body.buying #hud .teamta
 .pausesettings > * { width: 100%; max-width: 1100px; }
 .pausesettings #settings { flex: 1; min-height: 0; height: auto; }
 .pausesettings.show { display: flex; }
-.pausesettings > .btn { width: auto; align-self: center; margin-right: min(0px, calc(1100px - 100%)); }
+.pausesettings > .btn { width: auto; align-self: flex-start; margin-left: max(0px, calc((100% - 1100px) / 2)); }
 #clickin { z-index: 25; align-items: center; justify-content: center; background: rgba(5, 8, 12, 0.35); cursor: pointer; }
 .clickbox { text-align: center; background: rgba(10, 14, 19, 0.8); border: 1px solid var(--line2); padding: 22px 36px; border-radius: 4px; }
 .clickbox h2 { margin: 6px 0; font-size: 30px; letter-spacing: 0.08em; text-transform: uppercase; }

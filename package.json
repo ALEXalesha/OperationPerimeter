@@ -1,0 +1,19 @@
+{
+  "name": "operationperimeter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Operation: Perimeter - a tactical first-person shooter in the browser: 5v5 with bots, bomb defusal, round economy (three.js, fan-made)",
+  "author": "ALEXalesha",
+  "license": "MIT",
+  "homepage": "https://alexalesha.github.io/OperationPerimeter/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ALEXalesha/OperationPerimeter.git"
+  },
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1"
+  }
+}

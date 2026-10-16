@@ -244,7 +244,7 @@
       TAC.audio.resume();
     }
   });
-  // Окно потеряло фокус или страницу сняли с окна (вкладка в оболочке «Игротека») - тоже пауза
+  // Окно потеряло фокус или страницу сняли с окна (вкладка в оболочке «Хаб») - тоже пауза
   const focusLost = (why) => {
     for (const k in app.act) app.act[k] = false;
     app.mouseL = false;
@@ -252,7 +252,7 @@
   };
   addEventListener('blur', () => focusLost('Игра остановлена: окно потеряло фокус.'));
   // В обычном браузере Ctrl+W (присесть + вперёд) закрывает вкладку и это не отменить - во время матча спрашиваем.
-  // В «Игротеке» (Electron) такого сочетания нет, вопрос не нужен.
+  // В «Хабе» (Electron) такого сочетания нет, вопрос не нужен.
   const inElectron = /Electron/i.test(navigator.userAgent);
   addEventListener('beforeunload', (e) => {
     if (app.mode === 'game' && app.match && !app.match.over && !inElectron) { e.preventDefault(); e.returnValue = ''; }

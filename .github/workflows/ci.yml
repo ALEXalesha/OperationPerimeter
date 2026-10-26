@@ -1,0 +1,43 @@
+# Законы страницы в безголовом Chromium на GitHub (ревизия GitHub 25.10, Б5: у веб-репо с тестами не было CI,
+# и красный тест FallingBlocks никто не видел). Повторы - только для проверок, завязанных на реальное время
+# (под нагрузкой раннера); настоящая поломка красная и с повторами.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Page laws
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Page laws
+        run: npx playwright test --workers=1 --retries=2
+
+      # 26.10: упавшие законы - снимки и следы в артефакт (на машине GitHub - Linux и свои шрифты; без снимков
+      # хрупкий тест было не разобрать)
+      - name: Failed test pictures
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
